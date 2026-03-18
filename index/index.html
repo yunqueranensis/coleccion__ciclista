@@ -1,0 +1,3969 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mi Colección Ciclista</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+    <!-- Google Drive API -->
+    <script async defer src="https://apis.google.com/js/api.js" onload="gapiLoaded()"></script>
+    <script async defer src="https://accounts.google.com/gsi/client" onload="gisLoaded()"></script>
+    <style>
+        /* ===== VARIABLES Y RESET ===== */
+        :root {
+            --primary: #6366f1;
+            --primary-dark: #4f46e5;
+            --primary-light: #a5b4fc;
+            --secondary: #1e1b4b;
+            --success: #10b981;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+            --info: #06b6d4;
+            --bg-gradient: linear-gradient(135deg, #1e1b4b 0%, #312e81 40%, #4c1d95 100%);
+            --card-shadow: 0 4px 24px rgba(0,0,0,0.12);
+            --card-shadow-hover: 0 12px 40px rgba(99,102,241,0.25);
+            --radius: 16px;
+            --radius-sm: 10px;
+            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            --glass: rgba(255,255,255,0.08);
+            --glass-border: rgba(255,255,255,0.15);
+        }
+
+        *, *::before, *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
+            background: var(--bg-gradient);
+            min-height: 100vh;
+            padding: 20px;
+            color: #1e293b;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* ===== SCROLLBAR PERSONALIZADA ===== */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(99,102,241,0.4); border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(99,102,241,0.7); }
+
+        /* ===== CONTENEDOR ===== */
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+
+        /* ===== HEADER ===== */
+        header {
+            color: white;
+            margin-bottom: 12px;
+            position: relative;
+            padding: 6px 0;
+        }
+
+        .header-top-row {
+            display: flex;
+            align-items: center;
+            gap: 0;
+            width: 100%;
+        }
+
+        .header-brand {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-shrink: 0;
+            margin-right: 16px;
+        }
+
+        .header-content {
+            display: flex;
+            align-items: center;
+            justify-content: flex-start;
+            gap: 8px;
+        }
+
+        .header-icon {
+            font-size: 1.4em;
+            filter: drop-shadow(0 2px 6px rgba(0,0,0,0.3));
+            animation: float 3s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-4px); }
+        }
+
+        h1 {
+            font-size: clamp(0.9em, 2vw, 1.4em);
+            font-weight: 900;
+            letter-spacing: -0.02em;
+            text-shadow: 0 2px 10px rgba(0,0,0,0.3);
+            background: linear-gradient(135deg, #fff 0%, #c7d2fe 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            white-space: nowrap;
+        }
+
+        .header-subtitle {
+            color: rgba(255,255,255,0.6);
+            font-size: 0.62em;
+            margin-top: 1px;
+            font-weight: 500;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+            white-space: nowrap;
+        }
+
+        /* ===== ACTIONS-BAR INTEGRADA EN HEADER ===== */
+        .header-actions {
+            flex: 1;
+            background: rgba(255,255,255,0.97);
+            padding: 8px 14px;
+            border-radius: var(--radius);
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            box-shadow: var(--card-shadow);
+            gap: 7px;
+            border: 1px solid rgba(255,255,255,0.5);
+            margin-right: 62px;
+        }
+
+        /* ===== BOTÓN USUARIO ===== */
+        .user-lock {
+            position: absolute;
+            top: 4px;
+            right: 0;
+            background: var(--glass);
+            border: 2px solid var(--glass-border);
+            backdrop-filter: blur(10px);
+            border-radius: 50%;
+            width: 52px;
+            height: 52px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 1.4em;
+            transition: var(--transition);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+
+        .user-lock:hover {
+            background: rgba(255,255,255,0.2);
+            transform: scale(1.1) rotate(5deg);
+            border-color: rgba(255,255,255,0.4);
+        }
+
+        .user-lock.logged-in {
+            background: linear-gradient(135deg, var(--success), #059669);
+            border-color: var(--success);
+            box-shadow: 0 4px 20px rgba(16,185,129,0.4);
+        }
+
+        /* ===== PANEL USUARIO ===== */
+        .user-info {
+            position: absolute;
+            top: 68px;
+            right: 0;
+            background: white;
+            padding: 20px;
+            border-radius: var(--radius);
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            display: none;
+            z-index: 200;
+            min-width: 300px;
+            border: 1px solid rgba(99,102,241,0.1);
+            animation: slideDown 0.25s ease;
+        }
+
+        @keyframes slideDown {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .user-info.active { display: block; }
+
+        .user-info h4 {
+            margin-bottom: 14px;
+            color: var(--secondary);
+            font-size: 1.1em;
+            font-weight: 700;
+        }
+
+        .user-info p {
+            margin: 6px 0;
+            font-size: 0.9em;
+            color: #64748b;
+        }
+
+        /* ===== BARRA DE ESTADÍSTICAS ===== */
+        .stats-bar {
+            background: rgba(255,255,255,0.97);
+            padding: 12px 20px;
+            border-radius: var(--radius);
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            box-shadow: var(--card-shadow);
+            overflow-x: auto;
+            overflow-y: hidden;
+            white-space: nowrap;
+            gap: 10px;
+            border: 1px solid rgba(255,255,255,0.5);
+        }
+
+        .stats-left {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex: 1;
+            overflow-x: auto;
+            white-space: nowrap;
+        }
+
+        .stat-item {
+            background: #f1f5f9;
+            padding: 8px 16px;
+            border-radius: 50px;
+            font-weight: 600;
+            font-size: 0.82em;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            white-space: nowrap;
+            flex-shrink: 0;
+            color: #475569;
+            transition: var(--transition);
+            border: 1px solid transparent;
+        }
+
+        .stat-item:hover {
+            background: #e0e7ff;
+            border-color: var(--primary-light);
+            color: var(--primary-dark);
+        }
+
+        .stat-item span {
+            font-weight: 800;
+            color: var(--primary);
+        }
+
+        .stat-total {
+            background: linear-gradient(135deg, var(--primary), #8b5cf6) !important;
+            color: white !important;
+            border: none !important;
+            box-shadow: 0 4px 15px rgba(99,102,241,0.35);
+        }
+
+        .stat-total span {
+            color: white !important;
+            font-size: 1.1em;
+        }
+
+        /* ===== BARRA DE ACCIONES (eliminada, integrada en header) ===== */
+        .actions-bar {
+            display: none;
+        }
+
+        /* Botón +Nuevo */
+        .btn-nuevo {
+            background: linear-gradient(135deg, #10b981, #059669);
+            color: white;
+            padding: 8px 16px;
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            font-weight: 800;
+            font-size: 0.82em;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            box-shadow: 0 2px 8px rgba(16,185,129,0.35);
+            transition: var(--transition);
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+        .btn-nuevo:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(16,185,129,0.4);
+            filter: brightness(1.08);
+        }
+        .btn-nueva-cat {
+            background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+            color: white;
+            padding: 8px 14px;
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            font-weight: 800;
+            font-size: 0.82em;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            box-shadow: 0 2px 8px rgba(139,92,246,0.35);
+            transition: var(--transition);
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+        .btn-nueva-cat:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(139,92,246,0.4);
+            filter: brightness(1.08);
+        }
+        /* Separador visual en header-actions */
+        .header-actions-sep {
+            width: 1px;
+            height: 24px;
+            background: #e2e8f0;
+            flex-shrink: 0;
+            margin: 0 2px;
+        }
+
+        /* ===== BOTONES ===== */
+        .btn-sm {
+            padding: 9px 18px;
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            font-weight: 700;
+            color: white;
+            font-size: 0.82em;
+            transition: var(--transition);
+            white-space: nowrap;
+            flex-shrink: 0;
+            letter-spacing: 0.02em;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+        }
+
+        .btn-sm:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.2);
+            filter: brightness(1.08);
+        }
+
+        .btn-sm:active { transform: translateY(0); }
+
+        .btn-sm:disabled {
+            opacity: 0.45;
+            cursor: not-allowed;
+            transform: none !important;
+            filter: none !important;
+        }
+
+        .btn-view { background: linear-gradient(135deg, var(--info), #0891b2); }
+        .btn-export { background: linear-gradient(135deg, var(--success), #059669); }
+        .btn-export-excel { background: linear-gradient(135deg, #16a34a, #15803d); }
+        .btn-export-photos { background: linear-gradient(135deg, var(--warning), #d97706); color: white; }
+        .btn-import { background: linear-gradient(135deg, var(--primary), var(--primary-dark)); }
+        .btn-sync { background: linear-gradient(135deg, #4285F4, #34a853); }
+
+        .sync-status {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.75em;
+            font-weight: 700;
+            padding: 4px 10px;
+            border-radius: 50px;
+            background: rgba(255,255,255,0.2);
+            color: white;
+            margin-left: 10px;
+            border: 1px solid rgba(255,255,255,0.3);
+        }
+        .sync-status.online { background: rgba(16,185,129,0.2); color: #10b981; border-color: rgba(16,185,129,0.4); }
+
+        .btn-export-quick {
+            background: rgba(255,255,255,0.2);
+            border: 2px solid rgba(255,255,255,0.4);
+            color: white;
+            padding: 8px 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1.2em;
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .btn-export-quick:hover {
+            background: rgba(255,255,255,0.3);
+            border-color: white;
+            transform: scale(1.1);
+        }
+
+        /* ===== BOTONES CATEGORÍA ===== */
+        .category-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-bottom: 20px;
+            justify-content: center;
+        }
+
+        .cat-btn {
+            background: rgba(255,255,255,0.97);
+            border: none;
+            padding: 12px 22px;
+            border-radius: var(--radius);
+            font-size: 0.9em;
+            font-weight: 700;
+            cursor: pointer;
+            box-shadow: var(--card-shadow);
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            position: relative;
+            min-width: 160px;
+            flex-shrink: 0;
+            border-bottom: 3px solid transparent;
+        }
+
+        .cat-btn:hover {
+            transform: translateY(-4px);
+            box-shadow: var(--card-shadow-hover);
+        }
+
+        .cat-btn:active { transform: translateY(-1px); }
+
+        .cat-btn.bidon { border-bottom-color: #6366f1; color: #4f46e5; }
+        .cat-btn.bolsa { border-bottom-color: #f43f5e; color: #e11d48; }
+        .cat-btn.gorra { border-bottom-color: #06b6d4; color: #0891b2; }
+        .cat-btn.gorras-pódium,
+        .cat-btn.gorras-p-dium { border-bottom-color: #10b981; color: #059669; }
+        .cat-btn.cinta { border-bottom-color: #ef4444; color: #dc2626; }
+        .cat-btn.guante { border-bottom-color: #14b8a6; color: #0d9488; }
+        .cat-btn.maillots { border-bottom-color: #f59e0b; color: #d97706; }
+        .cat-btn.libro-de-ruta { border-bottom-color: #94a3b8; color: #64748b; }
+        .cat-btn.acreditaciones { border-bottom-color: #a855f7; color: #9333ea; }
+        .cat-btn.add-new {
+            border: 2px dashed rgba(99,102,241,0.3);
+            background: rgba(255,255,255,0.5);
+            color: #94a3b8;
+            backdrop-filter: blur(5px);
+        }
+        .cat-btn.add-new:hover {
+            border-color: var(--primary);
+            color: var(--primary);
+            background: rgba(99,102,241,0.05);
+        }
+
+        .cat-btn:disabled {
+            opacity: 0.45;
+            cursor: not-allowed;
+            transform: none !important;
+        }
+
+        .cat-delete {
+            position: absolute;
+            top: -6px;
+            right: -6px;
+            background: var(--danger);
+            color: white;
+            border: none;
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 11px;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 2px 8px rgba(239,68,68,0.4);
+            font-weight: 700;
+            transition: var(--transition);
+        }
+
+        .cat-btn:hover .cat-delete {
+            display: flex;
+        }
+
+        .cat-delete:hover {
+            transform: scale(1.15);
+        }
+
+        /* ===== FILTROS ===== */
+        .filters {
+            background: linear-gradient(135deg, #4f46e5 0%, #6366f1 100%);
+            padding: 8px 14px;
+            border-radius: 10px;
+            margin-bottom: 16px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            align-items: center;
+            box-shadow: 0 4px 14px rgba(99, 102, 241, 0.2);
+            border: 1px solid rgba(255,255,255,0.15);
+        }
+
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            flex: 1;
+            min-width: 140px;
+        }
+
+        .filter-group label {
+            display: block;
+            font-size: 0.7em;
+            font-weight: 800;
+            color: rgba(255,255,255,0.85);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+        }
+
+        select, input[type="text"], input[type="number"], input[type="password"], textarea {
+            width: 100%;
+            padding: 8px 12px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 13px;
+            font-family: inherit;
+            color: #1e293b;
+            background: white;
+            transition: var(--transition);
+            outline: none;
+        }
+
+        .filter-group input, .filter-group select {
+            background: white;
+            border: 2px solid rgba(255,255,255,0.3);
+            color: #1e293b;
+        }
+
+        .filter-group input::placeholder {
+            color: #cbd5e1;
+        }
+
+        .filter-group input:focus, .filter-group select:focus {
+            border-color: white;
+            box-shadow: 0 0 0 3px rgba(255,255,255,0.2);
+            background: white;
+        }
+
+        select:focus, input:focus, textarea:focus {
+            border-color: var(--primary);
+            background: white;
+            box-shadow: 0 0 0 3px rgba(99,102,241,0.12);
+        }
+
+        select:hover, input:hover {
+            border-color: #c7d2fe;
+        }
+
+        /* ===== GRID DE COLECCIÓN ===== */
+        .collection-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+            gap: 22px;
+        }
+
+        /* ===== TARJETAS ===== */
+        .card {
+            background: white;
+            border-radius: var(--radius);
+            overflow: hidden;
+            box-shadow: var(--card-shadow);
+            transition: var(--transition);
+            position: relative;
+            border: 1px solid rgba(0,0,0,0.04);
+            animation: cardIn 0.4s ease both;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        @keyframes cardIn {
+            from { opacity: 0; transform: translateY(20px) scale(0.97); }
+            to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+
+        .card:hover, .card:active {
+            transform: translateY(-6px);
+            box-shadow: var(--card-shadow-hover);
+            border-color: rgba(99,102,241,0.15);
+        }
+
+        @media (hover: none) and (pointer: coarse) {
+            .card:active {
+                transform: scale(0.98);
+            }
+        }
+
+        .card-image-container {
+            background: #f1f5f9;
+            position: relative;
+            overflow: hidden;
+            height: 260px;
+            width: 100%;
+            display: flex;
+            flex-wrap: wrap;
+            align-content: flex-start;
+            padding: 2px;
+            gap: 2px;
+        }
+
+        .card-image-container.layout-1 .photo-cell {
+            width: calc(100% - 4px);
+            height: calc(260px - 4px);
+        }
+        .card-image-container.layout-2 .photo-cell {
+            width: calc(50% - 3px);
+            height: calc(260px - 4px);
+        }
+        .card-image-container.layout-3 .photo-cell {
+            width: calc(50% - 3px);
+            height: calc(130px - 3px);
+        }
+        .card-image-container.layout-3 .photo-cell:first-child {
+            width: calc(50% - 3px);
+            height: calc(260px - 4px);
+        }
+        .card-image-container.layout-4 .photo-cell {
+            width: calc(50% - 3px);
+            height: calc(130px - 3px);
+        }
+
+        .photo-cell {
+            position: relative;
+            cursor: pointer;
+            overflow: hidden;
+        }
+
+        .photo-cell img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.4s ease;
+        }
+
+        .photo-cell:hover img { transform: scale(1.06); }
+
+        .card-no-photo {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            color: #cbd5e1;
+        }
+
+        .card-no-photo .no-photo-icon { font-size: 4em; }
+        .card-no-photo .no-photo-text { font-size: 0.75em; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; }
+
+        /* ===== BADGES EN TARJETA ===== */
+        .card-type {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(15,23,42,0.85);
+            backdrop-filter: blur(8px);
+            color: white;
+            padding: 4px 12px;
+            border-radius: 50px;
+            font-size: 0.7em;
+            font-weight: 700;
+            z-index: 10;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .photo-indicator {
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
+            background: rgba(255,255,255,0.95);
+            backdrop-filter: blur(8px);
+            color: #475569;
+            padding: 3px 10px;
+            border-radius: 50px;
+            font-size: 0.72em;
+            font-weight: 700;
+            z-index: 10;
+            display: none;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        /* ===== INFO DE TARJETA ===== */
+        .card-info {
+            padding: 16px;
+        }
+
+        .card-team {
+            font-size: 1em;
+            font-weight: 800;
+            color: #0f172a;
+            margin-bottom: 8px;
+            line-height: 1.3;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .card-meta {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-bottom: 8px;
+        }
+
+        .meta-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            background: #f1f5f9;
+            color: #64748b;
+            padding: 3px 10px;
+            border-radius: 50px;
+            font-size: 0.75em;
+            font-weight: 600;
+        }
+
+        .meta-badge.year {
+            background: #ede9fe;
+            color: #7c3aed;
+        }
+
+        .meta-badge.race {
+            background: #ecfdf5;
+            color: #059669;
+        }
+
+        .card-notes {
+            font-size: 0.8em;
+            color: #94a3b8;
+            margin-top: 8px;
+            padding-top: 8px;
+            border-top: 1px dashed #e2e8f0;
+            font-style: italic;
+            line-height: 1.5;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        /* ===== BOTÓN EDITAR FLOTANTE ===== */
+        .btn-edit-float {
+            position: absolute;
+            bottom: 12px;
+            right: 12px;
+            background: white;
+            border: 2px solid #e2e8f0;
+            color: #94a3b8;
+            cursor: pointer;
+            font-size: 1em;
+            z-index: 10;
+            transition: var(--transition);
+            padding: 6px 10px;
+            border-radius: 50px;
+            font-weight: 700;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            line-height: 1;
+        }
+
+        .btn-edit-float:hover {
+            background: var(--primary);
+            border-color: var(--primary);
+            color: white;
+            transform: scale(1.1);
+            box-shadow: 0 4px 15px rgba(99,102,241,0.4);
+        }
+
+        /* ===== MODALES ===== */
+        .modal {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(15,23,42,0.7);
+            backdrop-filter: blur(6px);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .modal.active {
+            display: flex;
+            animation: fadeIn 0.2s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 20px;
+            padding: 28px;
+            width: 100%;
+            max-width: 660px;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 30px 80px rgba(0,0,0,0.3);
+            animation: modalIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+            -webkit-overflow-scrolling: touch;
+        }
+
+        @media (max-width: 768px) {
+            .modal-content {
+                border-radius: 16px;
+                max-height: 85vh;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .modal {
+                padding: 0;
+                align-items: flex-end;
+            }
+
+            .modal-content {
+                border-radius: 16px 16px 0 0;
+                max-height: 95vh;
+                width: 100%;
+                max-width: 100%;
+                padding: 16px;
+            }
+        }
+
+        @keyframes modalIn {
+            from { opacity: 0; transform: scale(0.92) translateY(20px); }
+            to { opacity: 1; transform: scale(1) translateY(0); }
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 22px;
+            padding-bottom: 16px;
+            border-bottom: 2px solid #f1f5f9;
+        }
+
+        .modal-title {
+            font-size: 1.35em;
+            font-weight: 800;
+            color: #0f172a;
+            letter-spacing: -0.02em;
+        }
+
+        .close-btn {
+            background: #f1f5f9;
+            border: none;
+            font-size: 1.2em;
+            cursor: pointer;
+            color: #94a3b8;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: var(--transition);
+            font-weight: 700;
+        }
+
+        .close-btn:hover {
+            background: #fee2e2;
+            color: var(--danger);
+            transform: rotate(90deg);
+        }
+
+        /* ===== FORMULARIO ===== */
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        .form-group label {
+            display: block;
+            font-weight: 700;
+            margin-bottom: 6px;
+            font-size: 0.85em;
+            color: #475569;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 14px;
+        }
+
+        .btn-submit {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            color: white;
+            border: none;
+            border-radius: var(--radius-sm);
+            font-size: 1em;
+            font-weight: 700;
+            cursor: pointer;
+            margin-top: 18px;
+            transition: var(--transition);
+            letter-spacing: 0.02em;
+            box-shadow: 0 4px 15px rgba(99,102,241,0.35);
+        }
+
+        .btn-submit:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(99,102,241,0.45);
+            filter: brightness(1.05);
+        }
+
+        .btn-submit:disabled {
+            opacity: 0.45;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* ===== GALERÍA DE FOTOS ===== */
+        .gallery-preview {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+            gap: 8px;
+            margin-top: 10px;
+            padding: 12px;
+            background: #f8fafc;
+            border-radius: var(--radius-sm);
+            border: 2px dashed #e2e8f0;
+        }
+
+        .gallery-item {
+            position: relative;
+            aspect-ratio: 1;
+            border-radius: 8px;
+            overflow: hidden;
+            border: 2px solid #e2e8f0;
+            cursor: grab;
+            transition: var(--transition);
+        }
+
+        .gallery-item:hover {
+            border-color: var(--primary);
+            box-shadow: 0 4px 12px rgba(99,102,241,0.2);
+        }
+
+        .gallery-item.dragging {
+            opacity: 0.5;
+            border-color: var(--primary);
+            transform: scale(0.95);
+        }
+
+        .gallery-item img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            pointer-events: none;
+        }
+
+        .gallery-remove {
+            position: absolute;
+            top: 3px;
+            right: 3px;
+            background: rgba(239,68,68,0.9);
+            color: white;
+            border: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 11px;
+            z-index: 5;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            transition: var(--transition);
+        }
+
+        .gallery-remove:hover { background: var(--danger); transform: scale(1.15); }
+
+        /* ===== BOTÓN PELIGRO ===== */
+        .btn-danger {
+            background: linear-gradient(135deg, var(--danger), #dc2626);
+            color: white;
+            border: none;
+            padding: 12px;
+            border-radius: var(--radius-sm);
+            width: 100%;
+            margin-top: 12px;
+            cursor: pointer;
+            font-weight: 700;
+            font-size: 0.95em;
+            transition: var(--transition);
+            box-shadow: 0 4px 15px rgba(239,68,68,0.3);
+        }
+
+        .btn-danger:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(239,68,68,0.4);
+        }
+
+        .btn-danger:disabled { opacity: 0.45; cursor: not-allowed; transform: none; }
+
+        /* ===== INPUT CON BOTÓN ===== */
+        .input-with-btn {
+            display: flex;
+            gap: 6px;
+        }
+
+        .input-with-btn select { flex: 1; }
+
+        .input-with-btn button {
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            color: white;
+            border: none;
+            padding: 0 16px;
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            font-size: 1.2em;
+            font-weight: 700;
+            transition: var(--transition);
+            flex-shrink: 0;
+        }
+
+        .input-with-btn button:hover { filter: brightness(1.1); transform: scale(1.05); }
+
+        /* ===== TOAST ===== */
+        .toast {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            background: #0f172a;
+            color: white;
+            padding: 12px 22px;
+            border-radius: 50px;
+            transform: translateY(80px);
+            transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+            z-index: 3000;
+            font-weight: 600;
+            font-size: 0.9em;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.3);
+            max-width: 320px;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .toast.show { transform: translateY(0); }
+
+        /* ===== ÁREA DE SUBIDA ===== */
+        .file-upload-area {
+            border: 2px dashed #c7d2fe;
+            border-radius: var(--radius-sm);
+            padding: 18px;
+            text-align: center;
+            cursor: pointer;
+            background: #f5f3ff;
+            color: var(--primary);
+            font-weight: 600;
+            font-size: 0.9em;
+            transition: var(--transition);
+        }
+
+        .file-upload-area:hover {
+            background: #ede9fe;
+            border-color: var(--primary);
+            transform: scale(1.01);
+        }
+
+        /* ===== LIGHTBOX ===== */
+        .lightbox {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.97);
+            z-index: 2000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .lightbox.active {
+            display: flex;
+            animation: fadeIn 0.2s ease;
+        }
+
+        .lightbox-img {
+            max-width: 90vw;
+            max-height: 88vh;
+            object-fit: contain;
+            border-radius: 8px;
+            box-shadow: 0 30px 80px rgba(0,0,0,0.5);
+            animation: zoomIn 0.3s ease;
+        }
+
+        @keyframes zoomIn {
+            from { opacity: 0; transform: scale(0.9); }
+            to { opacity: 1; transform: scale(1); }
+        }
+
+        .lightbox-close {
+            position: absolute;
+            top: 20px;
+            right: 24px;
+            color: rgba(255,255,255,0.7);
+            font-size: 2.5em;
+            cursor: pointer;
+            background: rgba(255,255,255,0.1);
+            border: none;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: var(--transition);
+            font-weight: 300;
+        }
+
+        .lightbox-close:hover {
+            background: rgba(239,68,68,0.8);
+            color: white;
+            transform: rotate(90deg);
+        }
+
+        .lightbox-nav {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            background: rgba(255,255,255,0.12);
+            backdrop-filter: blur(8px);
+            color: white;
+            border: 1px solid rgba(255,255,255,0.2);
+            padding: 16px 20px;
+            font-size: 1.5em;
+            cursor: pointer;
+            border-radius: var(--radius-sm);
+            transition: var(--transition);
+        }
+
+        .lightbox-nav:hover {
+            background: rgba(255,255,255,0.25);
+            transform: translateY(-50%) scale(1.05);
+        }
+
+        .lightbox-prev { left: 20px; }
+        .lightbox-next { right: 20px; }
+
+        .lightbox-counter {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(255,255,255,0.12);
+            backdrop-filter: blur(8px);
+            color: white;
+            padding: 6px 18px;
+            border-radius: 50px;
+            font-size: 0.85em;
+            font-weight: 600;
+            border: 1px solid rgba(255,255,255,0.15);
+        }
+
+        /* ===== BÚSQUEDA AUTOCOMPLETE ===== */
+        .team-search-container { position: relative; }
+
+        .team-list {
+            position: absolute;
+            top: calc(100% + 4px);
+            left: 0;
+            right: 0;
+            background: white;
+            border: 2px solid #e2e8f0;
+            border-radius: var(--radius-sm);
+            max-height: 220px;
+            overflow-y: auto;
+            z-index: 200;
+            display: none;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.12);
+            animation: slideDown 0.15s ease;
+        }
+
+        .team-list.active { display: block; }
+
+        .team-option {
+            padding: 10px 14px;
+            cursor: pointer;
+            border-bottom: 1px solid #f1f5f9;
+            font-size: 0.88em;
+            font-weight: 500;
+            color: #334155;
+            transition: background 0.15s;
+        }
+
+        .team-option:hover { background: #f0f4ff; color: var(--primary); }
+        .team-option:last-child { border-bottom: none; }
+
+        /* ===== PANEL ADMIN ===== */
+        .admin-panel {
+            background: #f8fafc;
+            padding: 20px;
+            border-radius: var(--radius-sm);
+            margin-top: 16px;
+            border: 1px solid #e2e8f0;
+        }
+
+        .user-list-item {
+            padding: 12px;
+            border-bottom: 1px solid #f1f5f9;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-radius: 8px;
+            transition: background 0.15s;
+        }
+
+        .user-list-item:hover { background: #f8fafc; }
+
+        .user-credentials {
+            background: #fefce8;
+            padding: 6px 12px;
+            border-radius: 6px;
+            margin: 6px 0 0 0;
+            font-family: 'Courier New', monospace;
+            font-size: 0.85em;
+            color: #854d0e;
+            border: 1px solid #fde68a;
+        }
+
+        .admin-badge {
+            background: linear-gradient(135deg, var(--danger), #dc2626);
+            color: white;
+            padding: 2px 8px;
+            border-radius: 50px;
+            font-size: 0.7em;
+            margin-left: 6px;
+            font-weight: 700;
+            letter-spacing: 0.05em;
+        }
+
+        /* ===== ESTADÍSTICAS MODAL ===== */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 16px;
+            margin: 16px 0;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, var(--primary), #8b5cf6);
+            color: white;
+            padding: 20px;
+            border-radius: var(--radius);
+            text-align: center;
+            box-shadow: 0 6px 20px rgba(99,102,241,0.3);
+            transition: var(--transition);
+        }
+
+        .stat-card:hover { transform: translateY(-3px); box-shadow: 0 10px 30px rgba(99,102,241,0.4); }
+
+        .stat-card h3 {
+            font-size: 2.2em;
+            font-weight: 900;
+            letter-spacing: -0.03em;
+        }
+
+        .stat-card p {
+            margin: 4px 0 0 0;
+            opacity: 0.85;
+            font-size: 0.85em;
+            font-weight: 600;
+        }
+
+        .top-items {
+            background: #f8fafc;
+            padding: 16px;
+            border-radius: var(--radius-sm);
+            margin-top: 16px;
+            border: 1px solid #e2e8f0;
+        }
+
+        .top-items h3 {
+            font-size: 1em;
+            font-weight: 800;
+            color: #0f172a;
+            margin-bottom: 12px;
+        }
+
+        .top-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 0;
+            border-bottom: 1px solid #f1f5f9;
+            font-size: 0.88em;
+        }
+
+        .top-item:last-child { border-bottom: none; }
+        .top-item strong { color: var(--primary); font-weight: 700; }
+
+        .export-report-btns {
+            display: flex;
+            gap: 10px;
+            margin-top: 16px;
+            flex-wrap: wrap;
+        }
+
+        .export-report-btns .btn-sm { flex: 1; justify-content: center; }
+
+        /* ===== DROPDOWN ===== */
+        .btn-wrapper { position: relative; display: inline-block; }
+
+        .dropdown-menu {
+            position: absolute;
+            top: calc(100% + 6px);
+            right: 0;
+            background: white;
+            border: 2px solid #e2e8f0;
+            border-radius: var(--radius-sm);
+            min-width: 180px;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.12);
+            display: none;
+            z-index: 300;
+            overflow: hidden;
+            animation: slideDown 0.15s ease;
+        }
+
+        .dropdown-menu.active { display: block; }
+
+        .dropdown-item {
+            padding: 11px 18px;
+            cursor: pointer;
+            border-bottom: 1px solid #f1f5f9;
+            transition: background 0.15s;
+            font-size: 0.88em;
+            font-weight: 600;
+            color: #334155;
+        }
+
+        .dropdown-item:hover { background: #f0f4ff; color: var(--primary); }
+        .dropdown-item:last-child { border-bottom: none; }
+
+        /* ===== LOGIN ===== */
+        .login-form {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .btn-login-submit {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            color: white;
+            border: none;
+            border-radius: var(--radius-sm);
+            font-size: 1em;
+            font-weight: 700;
+            cursor: pointer;
+            margin-top: 8px;
+            transition: var(--transition);
+            box-shadow: 0 4px 15px rgba(99,102,241,0.3);
+        }
+
+        .btn-login-submit:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(99,102,241,0.45);
+            filter: brightness(1.05);
+        }
+
+        .login-hint {
+            background: #f0f4ff;
+            padding: 12px 16px;
+            border-radius: 8px;
+            margin-top: 12px;
+            font-size: 0.82em;
+            color: #64748b;
+            border: 1px solid #c7d2fe;
+        }
+
+        .login-hint strong { color: var(--primary); }
+
+        .btn-logout {
+            background: #f1f5f9;
+            color: #64748b;
+            border: none;
+            padding: 10px 15px;
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            margin-top: 8px;
+            width: 100%;
+            font-weight: 600;
+            font-size: 0.9em;
+            transition: var(--transition);
+        }
+
+        .btn-logout:hover { background: #fee2e2; color: var(--danger); }
+
+        /* ===== ESTADO VACÍO ===== */
+        .empty-state {
+            grid-column: 1 / -1;
+            text-align: center;
+            padding: 60px 20px;
+            color: rgba(255,255,255,0.7);
+        }
+
+        .empty-state .empty-icon { font-size: 4em; margin-bottom: 16px; opacity: 0.6; }
+        .empty-state h2 { font-size: 1.5em; font-weight: 700; margin-bottom: 8px; }
+        .empty-state p { font-size: 0.95em; opacity: 0.7; }
+
+        /* ===== RESPONSIVE ===== */
+        @media (max-width: 1024px) {
+            .filters {
+                flex-wrap: wrap;
+            }
+            .filter-group {
+                flex: 0 1 calc(50% - 8px);
+                min-width: auto;
+            }
+        }
+
+        @media (max-width: 768px) {
+            body { padding: 10px; }
+
+            h1 { font-size: 1.1em; }
+            .header-icon { font-size: 1.1em; }
+            .header-top-row { flex-wrap: wrap; gap: 8px; }
+            .header-actions { margin-right: 52px; flex-wrap: wrap; }
+
+            .stats-bar {
+                padding: 10px 12px;
+                gap: 8px;
+                flex-wrap: wrap;
+            }
+
+            .actions-bar {
+                padding: 10px 12px;
+                gap: 6px;
+                flex-wrap: wrap;
+            }
+
+            .btn-sm {
+                padding: 10px 12px;
+                font-size: 0.85em;
+                min-height: 44px;
+                min-width: 44px;
+            }
+
+            .filters {
+                flex-direction: column;
+                gap: 12px;
+                padding: 12px;
+            }
+
+            .filter-group {
+                flex: 1;
+                min-width: auto;
+            }
+
+            .collection-grid {
+                grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+                gap: 12px;
+            }
+
+            .modal-content {
+                padding: 16px;
+                border-radius: 12px;
+                max-height: 90vh;
+            }
+
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+
+            .cat-btn {
+                min-width: auto;
+                padding: 10px 14px;
+                font-size: 0.8em;
+                min-height: 44px;
+            }
+
+            .lightbox-nav {
+                padding: 14px 16px;
+                font-size: 1.4em;
+                min-height: 48px;
+                min-width: 48px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            body { padding: 8px; }
+
+            h1 { font-size: 0.95em; }
+            .header-icon { font-size: 1em; }
+            .header-actions { margin-right: 48px; padding: 6px 8px; gap: 4px; }
+            .header-brand { margin-right: 8px; }
+            .btn-nuevo, .btn-nueva-cat { padding: 6px 10px; font-size: 0.75em; }
+
+            .header-content {
+                gap: 6px;
+            }
+
+            .stats-bar {
+                padding: 8px 10px;
+                gap: 6px;
+                font-size: 0.8em;
+            }
+
+            .actions-bar {
+                padding: 8px 10px;
+                gap: 4px;
+                flex-wrap: wrap;
+            }
+
+            .btn-sm {
+                padding: 10px 10px;
+                font-size: 0.75em;
+                min-height: 44px;
+                flex: 1 1 calc(50% - 2px);
+            }
+
+            .filters {
+                flex-direction: column;
+                gap: 10px;
+                padding: 10px;
+                border-radius: 8px;
+            }
+
+            .filter-group {
+                flex: 1;
+                min-width: auto;
+            }
+
+            .filter-group label {
+                font-size: 0.65em;
+            }
+
+            select, input[type="text"], input[type="number"], input[type="password"], textarea {
+                font-size: 16px;
+                padding: 12px 10px;
+                min-height: 44px;
+            }
+
+            .collection-grid {
+                grid-template-columns: 1fr;
+                gap: 10px;
+            }
+
+            .card {
+                border-radius: 8px;
+            }
+
+            .modal-content {
+                padding: 14px;
+                border-radius: 10px;
+                max-height: 95vh;
+                width: 95vw !important;
+                max-width: 95vw !important;
+            }
+
+            .modal-header {
+                padding: 12px 14px;
+            }
+
+            .modal-title {
+                font-size: 1.2em;
+            }
+
+            .close-btn {
+                width: 36px;
+                height: 36px;
+                font-size: 1.2em;
+            }
+
+            .form-group {
+                margin-bottom: 12px;
+            }
+
+            .form-group label {
+                font-size: 0.85em;
+                margin-bottom: 6px;
+            }
+
+            .btn-submit {
+                padding: 12px 14px;
+                font-size: 0.9em;
+                min-height: 44px;
+            }
+
+            .cat-btn {
+                min-width: auto;
+                padding: 10px 12px;
+                font-size: 0.75em;
+                min-height: 44px;
+                flex: 1 1 calc(50% - 4px);
+            }
+
+            .lightbox-nav {
+                padding: 12px 14px;
+                font-size: 1.2em;
+                min-height: 48px;
+                min-width: 48px;
+            }
+
+            .lightbox-counter {
+                font-size: 0.85em;
+                padding: 8px 12px;
+            }
+
+            .export-report-btns { 
+                flex-direction: column;
+                gap: 8px;
+            }
+
+            .btn-export-quick {
+                padding: 10px 10px;
+                font-size: 1em;
+            }
+        }
+
+        /* ===== ANIMACIONES DE CARGA ===== */
+        .skeleton {
+            background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
+            background-size: 200% 100%;
+            animation: skeleton-loading 1.5s infinite;
+            border-radius: 8px;
+        }
+
+        @keyframes skeleton-loading {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+
+        /* ===== PROGRESS BAR EN STATS ===== */
+        .stat-progress {
+            height: 3px;
+            background: #e2e8f0;
+            border-radius: 10px;
+            margin-top: 4px;
+            overflow: hidden;
+        }
+
+        .stat-progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, var(--primary), #8b5cf6);
+            border-radius: 10px;
+            transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+
+        <!-- ===== HEADER ===== -->
+        <header>
+            <div class="header-top-row">
+                <!-- Marca: icono + título a la izquierda -->
+                <div class="header-brand">
+                    <div class="header-content">
+                        <span class="header-icon">🚴</span>
+                        <div>
+                            <h1>Mi Colección Ciclista</h1>
+                            <p class="header-subtitle">Gestión &amp; memorabilia</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Barra de acciones integrada en el header -->
+                <div class="header-actions" id="headerActions">
+                    <!-- +Nuevo y +Nueva Categoría -->
+                    <button class="btn-nuevo auth-required" onclick="abrirNuevoModal()" title="Añadir nuevo objeto">➕ Nuevo</button>
+                    <button class="btn-nueva-cat auth-required" onclick="abrirGestionCategorias()" title="Gestionar categorías">➕ Gestión Categorías</button>
+                    <div class="header-actions-sep"></div>
+                    <!-- Botones de gestión -->
+                    <button class="btn-sm btn-view auth-required" onclick="verEstadisticas()">📊 Ver DB</button>
+                    <button class="btn-sm btn-view" onclick="abrirAdvancedSearch()">🔍 Búsqueda Avanzada</button>
+                    <button class="btn-sm btn-export auth-required" onclick="prepararExportar()">📥 Exportar</button>
+                    <button class="btn-sm btn-export-excel auth-required" onclick="prepararExportarExcel()">📊 Excel</button>
+                    <div class="btn-wrapper">
+                        <button class="btn-sm btn-export-photos auth-required" onclick="toggleFotoDropdown()">📸 Fotos ▾</button>
+                        <div class="dropdown-menu" id="fotoDropdown">
+                            <div class="dropdown-item" onclick="prepararExportarFotos('equipo')">📁 Por Equipo</div>
+                            <div class="dropdown-item" onclick="prepararExportarFotos('year')">📅 Por Año</div>
+                            <div class="dropdown-item" onclick="prepararExportarFotos('tipo')">🏷️ Por Tipo</div>
+                        </div>
+                    </div>
+                    <button class="btn-sm btn-import auth-required" onclick="prepararImportar()">📤 Importar</button>
+                    <button class="btn-sm btn-sync auth-required" onclick="abrirSyncModal()">☁️ Google Drive</button>
+                </div>
+            </div>
+            <div class="user-lock" id="userLock" onclick="toggleUserMenu()" title="Iniciar sesión">🔒</div>
+            <div class="user-info" id="userInfo">
+                <h4 id="userMenuTitle">🔐 Iniciar Sesión</h4>
+                <div id="loginForm" class="login-form">
+                    <input type="text" id="loginUsername" placeholder="Usuario (solo letras)" maxlength="20" autocomplete="username" onkeydown="if(event.key==='Enter') document.getElementById('loginPassword').focus()">
+                    <input type="password" id="loginPassword" placeholder="Clave (4 números)" maxlength="10" autocomplete="current-password" onkeydown="if(event.key==='Enter') login()">
+                    <button class="btn-login-submit" id="loginBtn" onclick="login()">Entrar</button>
+                    <button class="btn-logout" onclick="toggleUserMenu()">Cancelar</button>
+                    <button onclick="console.log('Usuarios:', usuarios)" style="opacity:0; position:absolute; pointer-events:none;">Debug</button>
+                </div>
+                <div id="loggedInInfo" style="display: none;">
+                    <p><strong>👤 Usuario:</strong> <span id="displayUsername"></span></p>
+                    <p><strong>📦 Objetos:</strong> <span id="displayCount">0</span></p>
+                    <button class="btn-submit" onclick="abrirAdminModal()" id="adminPanelBtn" style="display: none; margin-top: 10px;">👑 Panel Admin</button>
+                    <button class="btn-logout" onclick="logout()">🚪 Cerrar Sesión</button>
+                </div>
+            </div>
+        </header>
+
+        <!-- ===== BARRA DE ESTADÍSTICAS ===== -->
+        <div class="stats-bar" id="statsBar">
+            <div class="stats-left">
+                <div class="stat-item stat-total">📊 Total: <span id="totalCount">0</span></div>
+                <div id="statsCategories" style="display: contents;"></div>
+            </div>
+        </div>
+
+        <!-- BARRA DE ACCIONES: ahora integrada en el header -->
+
+        <!-- ===== BOTONES DE CATEGORÍA (OCULTOS) ===== -->
+        <div class="category-buttons" id="categoryButtons" style="display: none;"></div>
+
+        <!-- ===== FILTROS ===== -->
+        <div class="filters">
+            <div class="filter-group">
+                <label>🔍 Buscar</label>
+                <input type="text" id="searchText" placeholder="Equipo o carrera..." oninput="filtrar()">
+            </div>
+            <div class="filter-group">
+                <label>🏷️ Categoría</label>
+                <select id="filterType" onchange="filtrar()">
+                    <option value="">Todas</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label>🚴 Equipo</label>
+                <div class="team-search-container">
+                    <input type="text" id="teamSearch" placeholder="Buscar equipo..." oninput="buscarEquipos()">
+                    <div class="team-list" id="teamList"></div>
+                </div>
+                <select id="filterTeam" onchange="filtrar()" style="display:none;"></select>
+            </div>
+            <div class="filter-group">
+                <label>🏁 Carrera</label>
+                <div class="team-search-container">
+                    <input type="text" id="raceSearch" placeholder="Buscar carrera..." oninput="buscarCarreras()">
+                    <div class="team-list" id="raceList"></div>
+                </div>
+                <select id="filterRace" onchange="filtrar()" style="display:none;"></select>
+            </div>
+            <div class="filter-group">
+                <label>📅 Año</label>
+                <select id="filterYear" onchange="filtrar()">
+                    <option value="">Todos</option>
+                </select>
+            </div>
+            <div class="filter-group" style="flex: 0.5; min-width: auto; margin-left: auto;">
+                <label style="color: rgba(255,255,255,0.7);">EXPORTAR</label>
+                <div style="display: flex; gap: 8px;">
+                    <button class="btn-export-quick" onclick="exportarResultadosPDF()" title="Exportar a PDF">📄</button>
+                    <button class="btn-export-quick" onclick="exportarResultadosExcel()" title="Exportar a Excel">📊</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===== GRID DE COLECCIÓN ===== -->
+        <div class="collection-grid" id="grid"></div>
+    </div>
+
+    <!-- ===== MODAL SYNC GOOGLE DRIVE ===== -->
+    <div class="modal" id="syncModal">
+        <div class="modal-content" style="max-width: 500px;">
+            <div class="modal-header">
+                <h2 class="modal-title">☁️ Sincronización Google Drive</h2>
+                <button class="close-btn" onclick="cerrarSyncModal()">✕</button>
+            </div>
+            <div id="syncSetup" style="display: block;">
+                <p style="margin-bottom: 15px; font-size: 0.9em; color: #64748b;">Para activar la sincronización, necesitas crear tus propias credenciales en Google Cloud Console (es gratis y solo se hace una vez).</p>
+                <div class="form-group">
+                    <label>Client ID de Google</label>
+                    <input type="text" id="gdriveClientId" placeholder="000000000000-xxxxxxxx.apps.googleusercontent.com">
+                </div>
+                <div class="form-group">
+                    <label>API Key de Google</label>
+                    <input type="password" id="gdriveApiKey" placeholder="AIzaSy...">
+                </div>
+                <button class="btn-submit" onclick="guardarConfigSync()">Guardar y Conectar</button>
+                <p style="margin-top: 15px; font-size: 0.8em; color: #94a3b8; text-align: center;">Tus credenciales se guardan solo en este navegador.</p>
+            </div>
+            <div id="syncActions" style="display: none;">
+                <div style="text-align: center; margin-bottom: 20px;">
+                    <div id="gdriveUser" style="font-weight: 700; color: var(--primary); margin-bottom: 5px;">Conectado a Google Drive</div>
+                    <div id="lastSyncInfo" style="font-size: 0.85em; color: #64748b;">Sin sincronizaciones recientes</div>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                    <button class="btn-submit" onclick="backupToDrive()" style="margin-top: 0; background: var(--success);">⬆️ Subir a la Nube</button>
+                    <button class="btn-submit" onclick="restoreFromDrive()" style="margin-top: 0; background: var(--info);">⬇️ Bajar de la Nube</button>
+                </div>
+                <button class="btn-logout" onclick="desconectarDrive()" style="margin-top: 20px;">Desconectar cuenta</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== MODAL GESTION DE CATEGORIAS ===== -->
+    <div class="modal" id="gestionCategoriasModal">
+        <div class="modal-content" style="max-width: 500px;">
+            <div class="modal-header">
+                <h2 class="modal-title">📋 Gestión de Categorías</h2>
+                <button class="close-btn" onclick="cerrarGestionCategorias()">✕</button>
+            </div>
+            <div style="padding: 20px;">
+                <div id="categoriasListaGestion" style="margin-bottom: 20px;"></div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                    <button class="btn-submit" onclick="nuevaCategoria()" style="background: var(--success); margin-top: 0;">➕ Nueva</button>
+                    <button class="btn-logout" onclick="cerrarGestionCategorias()" style="margin-top: 0;">Cerrar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== MODAL ADMIN ===== -->
+    <div class="modal" id="adminModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">👑 Panel de Administrador</h2>
+                <button class="close-btn" onclick="cerrarAdminModal()">✕</button>
+            </div>
+            <div class="admin-panel">
+                <p><strong>Usuario actual:</strong> <span id="currentAdminUser"></span> <span class="admin-badge">ADMIN</span></p>
+                <h4 style="margin-top: 18px; font-size: 0.95em; color: #475569; text-transform: uppercase; letter-spacing: 0.05em;">📋 Usuarios Existentes</h4>
+                <div id="userList" style="max-height: 280px; overflow-y: auto; margin-top: 10px;"></div>
+                <h4 style="margin-top: 20px; font-size: 0.95em; color: #475569; text-transform: uppercase; letter-spacing: 0.05em;">➕ Crear Nuevo Usuario</h4>
+                <div style="margin-top: 10px; display: flex; flex-direction: column; gap: 10px;">
+                    <input type="text" id="newUsername" placeholder="Nombre de usuario (solo letras)">
+                    <input type="password" id="newPassword" placeholder="Clave (4 números)" maxlength="4">
+                    <button class="btn-submit" onclick="crearUsuario()">Crear Usuario</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== MODAL SELECCIÓN USUARIO ===== -->
+    <div class="modal" id="userSelectModal">
+        <div class="modal-content" style="max-width: 420px;">
+            <div class="modal-header">
+                <h2 class="modal-title" id="userSelectTitle">Seleccionar Usuario</h2>
+                <button class="close-btn" onclick="cerrarUserSelectModal()">✕</button>
+            </div>
+            <div class="form-group">
+                <label id="userSelectLabel">¿A qué usuario pertenece esta base de datos?</label>
+                <select id="userSelectDropdown" style="padding: 12px; font-size: 1em; margin-top: 8px;"></select>
+            </div>
+            <button class="btn-submit" id="userSelectConfirm">Continuar</button>
+        </div>
+    </div>
+
+    <!-- ===== MODAL FORMULARIO ===== -->
+    <div class="modal" id="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title" id="modalTitle">Editar</h2>
+                <button class="close-btn" onclick="cerrarModal()">✕</button>
+            </div>
+            <form id="form" onsubmit="guardar(event)">
+                <input type="hidden" id="itemId">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>🏷️ Categoría</label>
+                        <select id="tipo" required></select>
+                    </div>
+                    <div class="form-group">
+                        <label>📅 Año *</label>
+                        <select id="ano" required></select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>🚴 Equipo *</label>
+                    <div class="team-search-container">
+                        <input type="text" id="teamSearchModal" placeholder="Buscar equipo..." oninput="buscarEquiposModal()">
+                        <div class="team-list" id="teamListModal"></div>
+                    </div>
+                    <div class="input-with-btn" style="margin-top: 6px;">
+                        <select id="equipo" required onchange="selectTeamFromDropdown()"></select>
+                        <button type="button" onclick="añadirEquipo()" title="Añadir equipo">+</button>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>🏁 Carrera</label>
+                    <div class="team-search-container">
+                        <input type="text" id="raceSearchModal" placeholder="Buscar carrera..." oninput="buscarCarrerasModal()">
+                        <div class="team-list" id="raceListModal"></div>
+                    </div>
+                    <div class="input-with-btn" style="margin-top: 6px;">
+                        <select id="carrera" onchange="selectRaceFromDropdown()">
+                            <option value="">Seleccionar...</option>
+                        </select>
+                        <button type="button" onclick="añadirCarrera()" title="Añadir carrera">+</button>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>📝 Notas</label>
+                    <textarea id="notas" rows="3" placeholder="Información adicional..."></textarea>
+                </div>
+                <div class="form-group">
+                    <label>📷 Fotos <span style="font-weight: 400; text-transform: none; color: #94a3b8;">(arrastra para ordenar)</span></label>
+                    <div class="file-upload-area" onclick="document.getElementById('fotoInput').click()">
+                        📷 Haz clic para subir fotos
+                    </div>
+                    <input type="file" id="fotoInput" multiple accept="image/*" style="display:none">
+                    <div class="gallery-preview" id="galleryPreview"></div>
+                </div>
+                <button type="submit" class="btn-submit">💾 Guardar</button>
+                <button type="button" class="btn-danger" id="btnDelete" onclick="eliminarItem()" style="display:none">🗑️ Eliminar objeto</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- ===== MODAL ESTADÍSTICAS ===== -->
+    <div class="modal" id="statsModal">
+        <div class="modal-content" style="max-width: 700px;">
+            <div class="modal-header">
+                <h2 class="modal-title">📊 Estadísticas de la Colección</h2>
+                <button class="close-btn" onclick="cerrarStatsModal()">✕</button>
+            </div>
+            <div id="statsContent"></div>
+            <div class="export-report-btns">
+                <button class="btn-sm btn-export" onclick="exportarReportePDF()">📄 Exportar PDF</button>
+                <button class="btn-sm btn-export-excel" onclick="exportarReporteExcel()">📊 Exportar Excel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== MODAL BÚSQUEDA AVANZADA (REDISEÑADO) ===== -->
+    <div class="modal" id="advancedSearchModal">
+        <div class="modal-content" style="max-width: 700px; max-height: 90vh; overflow-y: auto;">
+            <div class="modal-header">
+                <h2 class="modal-title">🔍 Filtros y Ordenación Avanzada</h2>
+                <button class="close-btn" onclick="cerrarAdvancedSearch()">✕</button>
+            </div>
+            <div style="padding: 20px; background: #f8fafc; border-radius: 0 0 20px 20px;">
+
+                <!-- SECCIÓN: CRITERIOS DE ORDENACIÓN MÚLTIPLE -->
+                <div style="background: white; padding: 16px; border-radius: 10px; margin-bottom: 14px; border-left: 4px solid #6366f1;">
+                    <h3 style="margin-bottom: 12px; font-size: 0.95em; color: #1e293b; font-weight: 700;">↕️ CRITERIOS DE ORDENACIÓN</h3>
+                    <p style="font-size: 0.8em; color: #64748b; margin-bottom: 12px;">Selecciona hasta 3 criterios para ordenar los resultados (de mayor a menor prioridad):</p>
+                    <div style="display: flex; flex-direction: column; gap: 8px;">
+                        <div style="display: grid; grid-template-columns: auto 1fr; gap: 8px; align-items: center;">
+                            <span style="font-size: 0.8em; font-weight: 700; color: #6366f1; white-space: nowrap; min-width: 80px;">1º Criterio</span>
+                            <select id="sortCrit1" style="padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px; width: 100%;">
+                                <option value="">-- Sin ordenar --</option>
+                                <option value="equipo_asc">📍 Equipo (A-Z)</option>
+                                <option value="equipo_desc">📍 Equipo (Z-A)</option>
+                                <option value="ano_asc">📅 Año (Antiguo → Reciente)</option>
+                                <option value="ano_desc">📅 Año (Reciente → Antiguo)</option>
+                                <option value="categoria_asc">📦 Categoría (A-Z)</option>
+                                <option value="categoria_desc">📦 Categoría (Z-A)</option>
+                                <option value="carrera_asc">🏁 Carrera (A-Z)</option>
+                                <option value="carrera_desc">🏁 Carrera (Z-A)</option>
+                            </select>
+                        </div>
+                        <div style="display: grid; grid-template-columns: auto 1fr; gap: 8px; align-items: center;">
+                            <span style="font-size: 0.8em; font-weight: 700; color: #8b5cf6; white-space: nowrap; min-width: 80px;">2º Criterio</span>
+                            <select id="sortCrit2" style="padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px; width: 100%;">
+                                <option value="">-- Sin ordenar --</option>
+                                <option value="equipo_asc">📍 Equipo (A-Z)</option>
+                                <option value="equipo_desc">📍 Equipo (Z-A)</option>
+                                <option value="ano_asc">📅 Año (Antiguo → Reciente)</option>
+                                <option value="ano_desc">📅 Año (Reciente → Antiguo)</option>
+                                <option value="categoria_asc">📦 Categoría (A-Z)</option>
+                                <option value="categoria_desc">📦 Categoría (Z-A)</option>
+                                <option value="carrera_asc">🏁 Carrera (A-Z)</option>
+                                <option value="carrera_desc">🏁 Carrera (Z-A)</option>
+                            </select>
+                        </div>
+                        <div style="display: grid; grid-template-columns: auto 1fr; gap: 8px; align-items: center;">
+                            <span style="font-size: 0.8em; font-weight: 700; color: #06b6d4; white-space: nowrap; min-width: 80px;">3º Criterio</span>
+                            <select id="sortCrit3" style="padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px; width: 100%;">
+                                <option value="">-- Sin ordenar --</option>
+                                <option value="equipo_asc">📍 Equipo (A-Z)</option>
+                                <option value="equipo_desc">📍 Equipo (Z-A)</option>
+                                <option value="ano_asc">📅 Año (Antiguo → Reciente)</option>
+                                <option value="ano_desc">📅 Año (Reciente → Antiguo)</option>
+                                <option value="categoria_asc">📦 Categoría (A-Z)</option>
+                                <option value="categoria_desc">📦 Categoría (Z-A)</option>
+                                <option value="carrera_asc">🏁 Carrera (A-Z)</option>
+                                <option value="carrera_desc">🏁 Carrera (Z-A)</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SECCIÓN: FILTROS DE BÚSQUEDA -->
+                <div style="background: white; padding: 16px; border-radius: 10px; margin-bottom: 14px; border-left: 4px solid #f59e0b;">
+                    <h3 style="margin-bottom: 12px; font-size: 0.95em; color: #1e293b; font-weight: 700;">🔎 FILTROS DE BÚSQUEDA</h3>
+
+                    <!-- Equipo -->
+                    <div style="margin-bottom: 12px;">
+                        <label style="display: block; font-size: 0.78em; font-weight: 700; color: #475569; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 5px;">📍 Equipo</label>
+                        <div style="display: grid; grid-template-columns: 1fr auto; gap: 6px;">
+                            <select id="advEquipo" style="padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px;">
+                                <option value="">Todos los equipos</option>
+                            </select>
+                            <input type="text" id="advEquipoTexto" placeholder="o escribe..." style="padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px; width: 130px;">
+                        </div>
+                    </div>
+
+                    <!-- Categoría -->
+                    <div style="margin-bottom: 12px;">
+                        <label style="display: block; font-size: 0.78em; font-weight: 700; color: #475569; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 5px;">📦 Categoría</label>
+                        <select id="advCategoria" style="width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px;">
+                            <option value="">Todas las categorías</option>
+                        </select>
+                    </div>
+
+                    <!-- Carrera -->
+                    <div style="margin-bottom: 12px;">
+                        <label style="display: block; font-size: 0.78em; font-weight: 700; color: #475569; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 5px;">🏁 Carrera</label>
+                        <div style="display: grid; grid-template-columns: 1fr auto; gap: 6px;">
+                            <select id="advCarreraSelect" style="padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px;">
+                                <option value="">Todas las carreras</option>
+                            </select>
+                            <input type="text" id="advCarrera" placeholder="o escribe..." style="padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px; width: 130px;">
+                        </div>
+                    </div>
+
+                    <!-- Rango de años -->
+                    <div>
+                        <label style="display: block; font-size: 0.78em; font-weight: 700; color: #475569; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 5px;">📅 Rango de Años</label>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                            <div>
+                                <label style="display: block; font-size: 11px; color: #94a3b8; margin-bottom: 4px;">Desde</label>
+                                <select id="advAnoMin" style="width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px;">
+                                    <option value="">Sin límite</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label style="display: block; font-size: 11px; color: #94a3b8; margin-bottom: 4px;">Hasta</label>
+                                <select id="advAnoMax" style="width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px;">
+                                    <option value="">Sin límite</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SECCIÓN: BÚSQUEDA POR TEXTO LIBRE -->
+                <div style="background: white; padding: 16px; border-radius: 10px; margin-bottom: 14px; border-left: 4px solid #10b981;">
+                    <h3 style="margin-bottom: 10px; font-size: 0.95em; color: #1e293b; font-weight: 700;">📝 BÚSQUEDA POR TEXTO</h3>
+                    <input type="text" id="advTextoLibre" placeholder="Escribe letras para filtrar en equipo, carrera o notas..." style="width: 100%; padding: 9px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px;">
+                    <p style="font-size: 0.75em; color: #94a3b8; margin-top: 6px;">Filtra en tiempo real por equipo, carrera y notas</p>
+                </div>
+
+                <!-- BOTONES DE ACCIÓN -->
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 16px;">
+                    <button onclick="aplicarBusquedaAvanzada()" style="background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%); color: white; border: none; padding: 12px; border-radius: 8px; cursor: pointer; font-weight: 700; font-size: 14px; transition: all 0.3s;">✓ Aplicar Filtros</button>
+                    <button onclick="restablecerOrdenacion()" style="background: #e2e8f0; color: #475569; border: none; padding: 12px; border-radius: 8px; cursor: pointer; font-weight: 700; font-size: 14px; transition: all 0.3s;">↻ Restablecer Todo</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== LIGHTBOX ===== -->
+    <div class="lightbox" id="lightbox" onclick="if(event.target===this) cerrarLightbox()">
+        <button class="lightbox-close" onclick="cerrarLightbox()">✕</button>
+        <button class="lightbox-nav lightbox-prev" onclick="cambiarFoto(-1)">❮</button>
+        <img class="lightbox-img" id="lightboxImg" src="" alt="Foto de colección">
+        <button class="lightbox-nav lightbox-next" onclick="cambiarFoto(1)">❯</button>
+        <div class="lightbox-counter" id="lightboxCounter">1 / 1</div>
+    </div>
+
+    <!-- ===== TOAST ===== -->
+    <div class="toast" id="toast"></div>
+
+    <script>
+        /* ===== CONSTANTES Y ESTADO ===== */
+        const DB_NAME = 'CiclistaDB_vFinal';
+        let db;
+        let currentUser = null;
+        // Credenciales de respaldo integradas directamente en el código
+        const USUARIOS_BACKUP = { 'adm': '6666', 'prueba': '0000' };
+        let usuarios = JSON.parse(localStorage.getItem('usuariosCiclista')) || USUARIOS_BACKUP;
+        let exportAction = null;
+        let pendingExportUser = null;
+        let pendingFotoFormat = null;
+        let categorias = ['Bidon', 'Bolsa', 'Gorra', 'Gorras Pódium', 'Cinta', 'Guante', 'Maillots', 'LIBRO DE RUTA', 'ACREDITACIONES'];
+
+        const iconosCategorias = {
+            'Bidon': '🚰', 'Bolsa': '🎒', 'Gorra': '🧢', 'Gorras Pódium': '🏆',
+            'Cinta': '📦', 'Guante': '🧤', 'Maillots': '👕',
+            'LIBRO DE RUTA': '📖', 'ACREDITACIONES': '🎫'
+        };
+
+        const categoriaOrden = {
+            'Bidon': 1, 'Bolsa': 2, 'Gorra': 3, 'Gorras Pódium': 4,
+            'Cinta': 5, 'Guante': 6, 'Maillots': 7, 'LIBRO DE RUTA': 8, 'ACREDITACIONES': 9
+        };
+
+        const coloresCategorias = {
+            'Bidon': '#6366f1', 'Bolsa': '#f43f5e', 'Gorra': '#06b6d4',
+            'Gorras Pódium': '#10b981', 'Cinta': '#ef4444', 'Guante': '#14b8a6',
+            'Maillots': '#f59e0b', 'LIBRO DE RUTA': '#94a3b8', 'ACREDITACIONES': '#a855f7'
+        };
+
+        let carreras = ["Tour de France","Giro d'Italia","Vuelta a España","Milan-San Remo","Tour de Flandes","Paris-Roubaix","Lieja-Bastoña-Lieja","Il Lombardia","Giro de Lombardia","Strade Bianche","Tirreno-Adriatico","Paris-Niza","Volta a Catalunya","Volta a la Comunitat Valenciana","Vuelta al Pais Vasco","Vuelta a Burgos","Vuelta a Andalucía","UAE Tour","Tour de Romandia","Criterium du Dauphine","Tour de Suisse","Tour Down Under","Tour de Polonia","BinckBank Tour","Campeonato del Mundo","Campeonato del Mundo Contrarreloj"].sort();
+
+        let equipos = ["UAE EMIRATES","JUMBO-VISMA","INEOS-GRENADIERS","SOUDAL-QUICKSTEP","RED BULL-BORA","LIDL-TREK","BAHRAIN-VICTORIOUS","ALPECIN-DECEUNINCK","MOVISTAR","ASTANA","EF-EDUCATION-EASYPOST","GROUPAMA-FDJ","INTERMARCHÉ-WANTY","ISRAEL-PREMIER TECH","JAYCO-ALULA","COFIDIS","DECATHLON-AG2R","TEAM DSM","BURGOS-BH","EUSKALTEL-EUSKADI","KERN PHARMA","CAJA RURAL-SEGUROS RGA","TOTALENERGIES","UNO-X PRO CYCLING","LOTTO-DSTNY","Q36.5 PRO CYCLING","TUDOR PRO CYCLING","POLTI-KOMETA","GREEN PROJECT-BARDIANI","EOLO-KOMETA","CORRATEC-VINI FANTINI","TEAM FLANDERS-BALOISE","SD WORX-PROTIME","FDJ-SUEZ","UAE TEAM ADQ","LIV-JAYCO ALULA","CANYON-SRAM","HUMAN POWERED HEALTH","FENIX-DECEUNINCK","ROLAND COGEAS","EF EDUCATION-TIBCO","LABORAL KUTXA","BIZKAIA-DURANGO","MASSI-TACTIC CYCLING TEAM","TEAM SKY","SKY","MITCHELTON-SCOTT","ORICA-GREENEDGE","TREK-SEGAFREDO","BORA-HANSGROHE","TEAM SUNWEB","KATUSHA-ALPECIN","TEAM DIMENSION DATA","CCC TEAM","LOTTO-SOUDAL","DECEUNINCK-QUICKSTEP","ETIXX-QUICKSTEP","OMEGA PHARMA-QUICKSTEP","TEAM HTC-COLUMBIA","RADIOSHACK","SAXO BANK","TINKOFF-SAXO","CANNONDALE","BMC RACING","LAMPRE-MERIDA","LIQUIGAS-DOIMO","GIANT-ALPECIN","TEAM KATUSHA","RABOBANK","GARMIN-SHARP","NTT PRO CYCLING","BAHRAIN-MERIDA","BAHRAIN-MCLAREN","CAISSE D'EPARGNE","XACOBEO GALICIA","ANDALUCÍA-CAJASUR","MURIAS TALDEA","EUSKADI-MURIAS","CANTABRIA DEPORTE","RELAX-GAM","SAUNIER-DUVAL","AG2R-LA MONDIALE","AG2R-CITROËN","TEAM EUROPCAR","DIRECT ÉNERGIE","IAM CYCLING","TEAM ARKEA-SAMSIC","BINGOAL WB","SPORT VLAANDEREN-BALOISE","ISRAEL START-UP NATION","W52-FC PORTO","EFAPEL CYCLING","COLOQUICK","POSTNORD","KELME","ONCE","BANESTO","MAPEI","FESTINA","SAECO","CARRERA","GEWISS","GATORADE","KAIKU","KARPIN GALICIA","KAS","BOELS-DOLMANS","RABO LIV WOMEN","CERATIZIT-WNT","VALCAR-TRAVEL & SERVICE","FDJ NOUVELLE-AQUITAINE","LOTTO-SOUDAL LADIES","TEAM DSM WOMEN","TEAM BIKEEXCHANGE","ESPAÑA","FRANCIA","ITALIA","ALEMANIA","BÉLGICA","PAÍSES BAJOS","PORTUGAL","AUSTRALIA","GRAN BRETAÑA","USA","DINAMARCA","NORUEGA","SUIZA","AUSTRIA","POLONIA","RUSIA","CANADÁ","ARGENTINA","SEL. ANDALUCÍA","SEL. ARAGÓN","SEL. ASTURIAS","SEL. CANARIAS","SEL. CANTABRIA","SEL. CASTILLA-LA MANCHA","SEL. EUSKADI","SEL. EXTREMADURA","SEL. GALICIA","SEL. LA RIOJA","SEL. MADRID","SEL. NAVARRA"].sort();
+
+        equipos = [...new Set(equipos)];
+        carreras = [...new Set(carreras)];
+
+        let coleccion = [];
+        let fotosTemporales = [];
+        let draggedFoto = null;
+        let lightboxFotos = [];
+        let lightboxIndex = 0;
+        let editId = null;
+        let fotosDB = {};
+
+        /* ===== INICIALIZACIÓN ===== */
+        function initDB() {
+            return new Promise((resolve, reject) => {
+                // Sincronizar usuarios con localStorage y asegurar backups
+                usuarios = JSON.parse(localStorage.getItem('usuariosCiclista')) || {};
+                Object.assign(usuarios, USUARIOS_BACKUP);
+                localStorage.setItem('usuariosCiclista', JSON.stringify(usuarios));
+                
+                const request = indexedDB.open(DB_NAME, 1);
+                request.onupgradeneeded = (e) => {
+                    db = e.target.result;
+                    if (!db.objectStoreNames.contains('config')) {
+                        db.createObjectStore('config', { keyPath: 'key' });
+                    }
+                };
+                request.onsuccess = (e) => { db = e.target.result; resolve(db); };
+                request.onerror = (e) => reject(e);
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            await initDB();
+            checkSession();
+            renderizarCategorias();
+            llenarSelects();
+        });
+
+        /* ===== SESIÓN ===== */
+        const VIEW_ONLY_USER = 'adm'; // Usuario público de solo lectura
+        let viewOnlyMode = false; // true cuando se visualiza sin sesión
+
+        function checkSession() {
+            const session = sessionStorage.getItem('currentUser');
+            const CREDS_FIJAS = { 'adm': '6666', 'prueba': '0000' };
+            const todosUsuarios = Object.assign({}, CREDS_FIJAS, usuarios);
+            if (session && todosUsuarios[session] !== undefined) {
+                currentUser = session;
+                viewOnlyMode = false;
+                actualizarEstadoUsuario();
+                cargarColeccion();
+            } else {
+                // Modo solo visualizaci\u00f3n: cargar colecci\u00f3n del usuario 'adm'
+                viewOnlyMode = true;
+                currentUser = null;
+                actualizarEstadoUsuario();
+                cargarColeccionPublica();
+            }
+        }
+
+        /* Carga la colección del usuario 'adm' en modo solo lectura */
+        function cargarColeccionPublica() {
+            const dbName = `${DB_NAME}_${VIEW_ONLY_USER}`;
+            const request = indexedDB.open(dbName, 1);
+            request.onupgradeneeded = (e) => {
+                const database = e.target.result;
+                if (!database.objectStoreNames.contains('coleccion')) {
+                    database.createObjectStore('coleccion', { keyPath: 'id' });
+                }
+            };
+            request.onsuccess = (e) => {
+                const userDb = e.target.result;
+                const tx = userDb.transaction('coleccion', 'readonly');
+                const req = tx.objectStore('coleccion').getAll();
+                req.onsuccess = () => {
+                    coleccion = req.result || [];
+                    coleccion.forEach(item => {
+                        if (item.fotos) item.fotos.forEach((foto, idx) => { fotosDB[`${item.id}_${idx}`] = foto; });
+                    });
+                    actualizarStats();
+                    actualizarFiltroAnos();
+                    filtrar();
+                    // Mostrar banner de modo visualización
+                    mostrarBannerVisualizacion();
+                };
+            };
+            request.onerror = () => {
+                // Si no hay DB del usuario adm, mostrar colección vacía
+                coleccion = [];
+                actualizarStats();
+                mostrarEstadoVacio('empty');
+                mostrarBannerVisualizacion();
+            };
+        }
+
+        function mostrarBannerVisualizacion() {
+            // Mostrar banner informativo de modo solo lectura
+            const existing = document.getElementById('viewOnlyBanner');
+            if (existing) return;
+            const banner = document.createElement('div');
+            banner.id = 'viewOnlyBanner';
+            banner.style.cssText = 'background: linear-gradient(135deg, #f59e0b, #d97706); color: white; text-align: center; padding: 8px 16px; font-size: 0.85em; font-weight: 700; border-radius: 8px; margin-bottom: 12px; display: flex; align-items: center; justify-content: center; gap: 8px;';
+            banner.innerHTML = '👁️ Modo visualización &mdash; Viendo la colección pública. <a href="#" onclick="toggleUserMenu(); return false;" style="color: white; text-decoration: underline; margin-left: 6px;">Inicia sesión</a> para acceder a tu colección y funciones de edición.';
+            const container = document.querySelector('.container');
+            const header = container.querySelector('header');
+            header.after(banner);
+        }
+
+        function mostrarEstadoVacio(tipo) {
+            const grid = document.getElementById('grid');
+            if (tipo === 'login') {
+                grid.innerHTML = `<div class="empty-state"><div class="empty-icon">🔐</div><h2>Inicia sesión para ver tu colección</h2><p>Usa el botón de usuario en la esquina superior derecha</p></div>`;
+            } else {
+                grid.innerHTML = `<div class="empty-state"><div class="empty-icon">💭</div><h2>No hay objetos</h2><p>Prueba con otros filtros o añade nuevos objetos</p></div>`;
+            }
+        }
+
+        function toggleUserMenu() {
+            const userInfo = document.getElementById('userInfo');
+            userInfo.classList.toggle('active');
+            actualizarPanelUsuario();
+        }
+
+        function actualizarPanelUsuario() {
+            if (currentUser) {
+                document.getElementById('loginForm').style.display = 'none';
+                document.getElementById('loggedInInfo').style.display = 'block';
+                document.getElementById('userMenuTitle').textContent = '\ud83d\udc64 Mi Cuenta';
+                document.getElementById('displayUsername').textContent = currentUser;
+                document.getElementById('displayCount').textContent = coleccion.length;
+                // Mostrar bot\u00f3n admin si la clave es 6666
+                const CREDS_FIJAS = { 'adm': '6666', 'prueba': '0000' };
+                const todosUsuarios = Object.assign({}, CREDS_FIJAS, usuarios);
+                document.getElementById('adminPanelBtn').style.display = todosUsuarios[currentUser] === '6666' ? 'block' : 'none';
+            } else {
+                document.getElementById('loginForm').style.display = 'flex';
+                document.getElementById('loggedInInfo').style.display = 'none';
+                document.getElementById('userMenuTitle').textContent = '\ud83d\udd10 Iniciar Sesi\u00f3n';
+            }
+        }
+
+        function login() {
+            const usuario = document.getElementById('loginUsername').value.trim().toLowerCase();
+            const clave = document.getElementById('loginPassword').value.trim();
+            
+            if (!usuario || !clave) {
+                showToast('\u274c Completa usuario y clave');
+                return;
+            }
+
+            // Credenciales fijas (siempre disponibles)
+            const CREDS_FIJAS = { 'adm': '6666', 'prueba': '0000' };
+            // Combinar con usuarios del localStorage
+            const todosUsuarios = Object.assign({}, CREDS_FIJAS, usuarios);
+
+            if (todosUsuarios[usuario] !== undefined && String(todosUsuarios[usuario]) === String(clave)) {
+                currentUser = usuario;
+                viewOnlyMode = false;
+                sessionStorage.setItem('currentUser', usuario);
+                document.getElementById('loginUsername').value = '';
+                document.getElementById('loginPassword').value = '';
+                console.log('\u2705 Login exitoso:', usuario);
+                const banner = document.getElementById('viewOnlyBanner');
+                if (banner) banner.remove();
+                // Cerrar el panel primero para que toggleUserMenu lo abra en modo logueado
+                document.getElementById('userInfo').classList.remove('active');
+                actualizarEstadoUsuario();
+                coleccion = [];
+                fotosDB = {};
+                cargarColeccion();
+                showToast(`\u2705 \u00a1Bienvenido, ${usuario}!`);
+            } else {
+                showToast('\u274c Usuario o clave incorrectos');
+                console.error('\u274c Login fallido. Usuario:', usuario, '| Clave introducida:', clave);
+                document.getElementById('loginPassword').value = '';
+                document.getElementById('loginPassword').focus();
+            }
+        }
+
+        function logout() {
+            currentUser = null;
+            viewOnlyMode = true;
+            sessionStorage.removeItem('currentUser');
+            toggleUserMenu();
+            showToast('🚪 Sesión cerrada');
+            // Recargar para volver al modo visualización pública
+            setTimeout(() => location.reload(), 500);
+        }
+
+        function actualizarEstadoUsuario() {
+            const lock = document.getElementById('userLock');
+            if (currentUser) {
+                lock.textContent = '🔓';
+                lock.classList.add('logged-in');
+                lock.title = `${currentUser} — Clic para cerrar`;
+            } else {
+                lock.textContent = '🔒';
+                lock.classList.remove('logged-in');
+                lock.title = 'Iniciar sesión';
+            }
+            // Ocultar/mostrar botones que requieren autenticación
+            const authButtons = document.querySelectorAll('.auth-required');
+            authButtons.forEach(btn => {
+                btn.style.display = currentUser ? '' : 'none';
+            });
+            // Deshabilitar botones de edición en tarjetas
+            const editButtons = document.querySelectorAll('.cat-btn:not(.add-new), .btn-submit, .btn-danger, .file-upload-area');
+            editButtons.forEach(btn => { btn.disabled = !currentUser; });
+            // Mostrar/ocultar botones de edición en tarjetas
+            const cardEditBtns = document.querySelectorAll('.card-edit-btn, .card-delete-btn');
+            cardEditBtns.forEach(btn => {
+                btn.style.display = currentUser ? '' : 'none';
+            });
+        }
+
+        /* ===== ADMIN ===== */
+        function abrirAdminModal() {
+            const CREDS_FIJAS = { 'adm': '6666', 'prueba': '0000' };
+            const todosUsuarios = Object.assign({}, CREDS_FIJAS, usuarios);
+            if (!currentUser || todosUsuarios[currentUser] !== '6666') { showToast('\ud83d\udd10 Solo el administrador puede acceder'); return; }
+            toggleUserMenu();
+            document.getElementById('adminModal').classList.add('active');
+            document.getElementById('currentAdminUser').textContent = currentUser;
+            mostrarListaUsuarios();
+        }
+
+        function cerrarAdminModal() { document.getElementById('adminModal').classList.remove('active'); }
+
+        function crearUsuario() {
+            const newUsername = document.getElementById('newUsername').value.toLowerCase().trim();
+            const newPassword = document.getElementById('newPassword').value;
+            if (!/^[a-z]+$/.test(newUsername)) { showToast('❌ Usuario: solo letras'); return; }
+            if (!/^\d{4}$/.test(newPassword)) { showToast('❌ Clave: 4 números'); return; }
+            if (usuarios[newUsername]) { showToast('⚠️ Usuario ya existe'); return; }
+            usuarios[newUsername] = newPassword;
+            localStorage.setItem('usuariosCiclista', JSON.stringify(usuarios));
+            mostrarListaUsuarios();
+            showToast(`✅ Usuario "${newUsername}" creado`);
+            document.getElementById('newUsername').value = '';
+            document.getElementById('newPassword').value = '';
+        }
+
+        function mostrarListaUsuarios() {
+            const userList = document.getElementById('userList');
+            userList.innerHTML = '';
+            Object.keys(usuarios).forEach((user, index) => {
+                const div = document.createElement('div');
+                div.className = 'user-list-item';
+                div.innerHTML = `<div><strong>${user}</strong>${index === 0 ? '<span class="admin-badge">ADMIN</span>' : ''}<div class="user-credentials">Clave: ${usuarios[user]}</div></div>${user !== 'adm' ? `<button onclick="eliminarUsuario('${user}')" style="background: var(--danger); color: white; border: none; padding: 6px 12px; border-radius: 8px; cursor: pointer; font-size: 0.85em; font-weight: 600;">🗑️</button>` : ''}`;
+                userList.appendChild(div);
+            });
+        }
+
+        function eliminarUsuario(username) {
+            if (confirm(`¿Eliminar usuario "${username}" y TODOS sus datos?`)) {
+                delete usuarios[username];
+                localStorage.setItem('usuariosCiclista', JSON.stringify(usuarios));
+                indexedDB.deleteDatabase(`${DB_NAME}_${username}`).onsuccess = () => {
+                    mostrarListaUsuarios();
+                    showToast(`🗑️ Usuario "${username}" eliminado`);
+                };
+            }
+        }
+
+        /* ===== CATEGORÍAS ===== */
+        function renderizarCategorias() {
+            const container = document.getElementById('categoryButtons');
+            container.innerHTML = '';
+            categorias.forEach(cat => {
+                const btn = document.createElement('button');
+                btn.className = 'cat-btn';
+                const catKey = cat.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+                btn.classList.add(catKey);
+                const color = coloresCategorias[cat] || '#94a3b8';
+                if (!coloresCategorias[cat]) {
+                    btn.style.borderBottomColor = color;
+                    btn.style.color = color;
+                }
+                const icon = iconosCategorias[cat] || '📦';
+                // Los botones de categoría ahora solo filtran (no abren modal directamente)
+                // El modal se abre desde +Nuevo
+                btn.innerHTML = `<span>${icon}</span>${cat}<button class="cat-delete auth-required" onclick="eliminarCategoria('${cat}', event)" title="Eliminar categoría">×</button>`;
+                btn.onclick = (e) => {
+                    if (!e.target.classList.contains('cat-delete')) {
+                        // Filtrar por esta categoría
+                        const filterType = document.getElementById('filterType');
+                        if (filterType.value === cat) {
+                            filterType.value = '';
+                        } else {
+                            filterType.value = cat;
+                        }
+                        filtrar();
+                    }
+                };
+                container.appendChild(btn);
+            });
+        }
+
+        function abrirGestionCategorias() {
+            if (!currentUser) { showToast('🔐 Inicia sesión primero'); return; }
+            document.getElementById('gestionCategoriasModal').classList.add('active');
+            actualizarListaCategorias();
+        }
+
+        function cerrarGestionCategorias() {
+            document.getElementById('gestionCategoriasModal').classList.remove('active');
+        }
+
+        function actualizarListaCategorias() {
+            const lista = document.getElementById('categoriasListaGestion');
+            lista.innerHTML = '';
+            categorias.forEach(cat => {
+                const item = document.createElement('div');
+                item.style.cssText = 'display: flex; justify-content: space-between; align-items: center; padding: 12px; background: #f8fafc; border-radius: 8px; margin-bottom: 8px; border-left: 4px solid ' + (coloresCategorias[cat] || '#94a3b8') + ';';
+                const icon = iconosCategorias[cat] || '📦';
+                const count = coleccion.filter(i => i.tipo === cat).length;
+                item.innerHTML = `
+                    <div style="display: flex; align-items: center; gap: 10px; flex: 1;">
+                        <span style="font-size: 1.2em;">${icon}</span>
+                        <div>
+                            <div style="font-weight: 600; color: #1e293b;">${cat}</div>
+                            <div style="font-size: 0.85em; color: #94a3b8;">${count} artículo(s)</div>
+                        </div>
+                    </div>
+                    <button onclick="eliminarCategoriaGestion('${cat}')" style="background: #fee2e2; color: #dc2626; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 0.85em; transition: all 0.2s;" onmouseover="this.style.background='#fecaca'" onmouseout="this.style.background='#fee2e2';">❌ Eliminar</button>
+                `;
+                lista.appendChild(item);
+            });
+        }
+
+        function eliminarCategoriaGestion(cat) {
+            const articulosACategoria = coleccion.filter(i => i.tipo === cat);
+            const count = articulosACategoria.length;
+            let confirmMsg = `¿Eliminar la categoría "${cat}"?`;
+            if (count > 0) confirmMsg += `\n⚠️ Se eliminarán también los ${count} artículo(s) en esta categoría.`;
+            if (confirm(confirmMsg)) {
+                const dbName = `${DB_NAME}_${currentUser}`;
+                const request = indexedDB.open(dbName, 1);
+                request.onsuccess = (e) => {
+                    const userDb = e.target.result;
+                    const tx = userDb.transaction('coleccion', 'readwrite');
+                    const store = tx.objectStore('coleccion');
+                    articulosACategoria.forEach(item => store.delete(item.id));
+                    tx.oncomplete = () => {
+                        categorias = categorias.filter(c => c !== cat);
+                        renderizarCategorias();
+                        llenarSelects();
+                        cargarColeccion();
+                        actualizarListaCategorias();
+                        showToast(`✅ Categoría "${cat}" eliminada`);
+                    };
+                };
+            }
+        }
+
+        function nuevaCategoria() {
+            const nueva = prompt("Nombre de la nueva categoría:");
+            if (nueva && nueva.trim()) {
+                const nombreLimpio = nueva.trim();
+                if (!categorias.includes(nombreLimpio)) {
+                    categorias.push(nombreLimpio);
+                    renderizarCategorias();
+                    llenarSelects();
+                    actualizarListaCategorias();
+                    showToast('✅ Categoría añadida');
+                } else {
+                    showToast('⚠️ Esa categoría ya existe');
+                }
+            }
+        }
+
+        function abrirNuevoModal() {
+            if (!currentUser) { showToast('🔐 Inicia sesión primero'); return; }
+            // Abrir modal con el primer tipo disponible
+            abrirModal(categorias[0] || null);
+        }
+
+        async function eliminarCategoria(cat, event) {
+            event.stopPropagation();
+            if (!currentUser) { showToast('🔐 Inicia sesión primero'); return; }
+            const articulosACategoria = coleccion.filter(i => i.tipo === cat);
+            const count = articulosACategoria.length;
+            let confirmMsg = `¿Eliminar categoría "${cat}"?`;
+            if (count > 0) confirmMsg += `\n⚠️ Se eliminarán también los ${count} artículo(s) en esta categoría.`;
+            if (confirm(confirmMsg)) {
+                const dbName = `${DB_NAME}_${currentUser}`;
+                const request = indexedDB.open(dbName, 1);
+                request.onsuccess = (e) => {
+                    const userDb = e.target.result;
+                    const tx = userDb.transaction('coleccion', 'readwrite');
+                    const store = tx.objectStore('coleccion');
+                    articulosACategoria.forEach(item => store.delete(item.id));
+                    tx.oncomplete = () => {
+                        categorias = categorias.filter(c => c !== cat);
+                        cargarColeccion();
+                        renderizarCategorias();
+                        llenarSelects();
+                        showToast(`🗑️ Categoría y ${count} artículo(s) eliminados`);
+                    };
+                    tx.onerror = () => { showToast('❌ Error al eliminar'); };
+                };
+            }
+        }
+
+        /* ===== SELECTS ===== */
+        function llenarSelectAno() {
+            const selAno = document.getElementById('ano');
+            if (!selAno) return;
+            const currentVal = selAno.value;
+            selAno.innerHTML = '';
+            // Opción sin datos
+            const optSinDatos = document.createElement('option');
+            optSinDatos.value = 'sin_datos'; optSinDatos.textContent = 'Sin datos';
+            selAno.appendChild(optSinDatos);
+            // Años de 2050 a 1900
+            for (let y = 2050; y >= 1900; y--) {
+                const opt = document.createElement('option');
+                opt.value = y; opt.textContent = y;
+                selAno.appendChild(opt);
+            }
+            // Restaurar valor o poner 2026 por defecto
+            if (currentVal && selAno.querySelector(`option[value="${currentVal}"]`)) {
+                selAno.value = currentVal;
+            } else {
+                selAno.value = '2026';
+            }
+        }
+
+        /* ===== SELECTS ===== */
+        function llenarSelects() {
+            const selTipo = document.getElementById('tipo');
+            selTipo.innerHTML = '';
+            categorias.forEach(c => {
+                const opt = document.createElement('option');
+                opt.value = c; opt.textContent = c;
+                selTipo.appendChild(opt);
+            });
+            llenarSelectAno();
+
+            const selEquipo = document.getElementById('equipo');
+            const selFiltro = document.getElementById('filterTeam');
+            selEquipo.innerHTML = '<option value="">Seleccionar...</option>';
+            selFiltro.innerHTML = '<option value="">Todos</option>';
+            equipos.forEach(eq => {
+                [selEquipo, selFiltro].forEach(sel => {
+                    const opt = document.createElement('option');
+                    opt.value = eq; opt.textContent = eq;
+                    sel.appendChild(opt);
+                });
+            });
+
+            const selCarrera = document.getElementById('carrera');
+            selCarrera.innerHTML = '<option value="">Seleccionar...</option>';
+            carreras.forEach(c => {
+                const opt = document.createElement('option');
+                opt.value = c; opt.textContent = c;
+                selCarrera.appendChild(opt);
+            });
+
+            const selTipoFiltro = document.getElementById('filterType');
+            selTipoFiltro.innerHTML = '<option value="">Todos</option>';
+            categorias.forEach(c => {
+                const opt = document.createElement('option');
+                opt.value = c; opt.textContent = c;
+                selTipoFiltro.appendChild(opt);
+            });
+        }
+
+        /* ===== BÚSQUEDA AUTOCOMPLETE ===== */
+        function buscarEquipos() {
+            const search = document.getElementById('teamSearch').value.toUpperCase().trim();
+            const list = document.getElementById('teamList');
+            const select = document.getElementById('filterTeam');
+            list.innerHTML = '';
+            // Si se borra el texto, limpiar el select y refiltrar
+            if (search.length < 1) {
+                select.value = '';
+                list.classList.remove('active');
+                filtrar();
+                return;
+            }
+            const filtered = equipos.filter(eq => eq.toUpperCase().includes(search)).slice(0, 15);
+            filtered.forEach(eq => {
+                const item = document.createElement('div');
+                item.className = 'team-option';
+                item.textContent = eq;
+                item.onclick = () => { select.value = eq; document.getElementById('teamSearch').value = eq; list.classList.remove('active'); filtrar(); };
+                list.appendChild(item);
+            });
+            if (filtered.length > 0) list.classList.add('active');
+            // Filtrar en tiempo real mientras se escribe
+            filtrar();
+        }
+
+        function buscarEquiposModal() {
+            const search = document.getElementById('teamSearchModal').value.toUpperCase().trim();
+            const list = document.getElementById('teamListModal');
+            const select = document.getElementById('equipo');
+            list.innerHTML = '';
+            if (search.length < 1) { list.classList.remove('active'); return; }
+            const filtered = equipos.filter(eq => eq.includes(search)).slice(0, 15);
+            filtered.forEach(eq => {
+                const item = document.createElement('div');
+                item.className = 'team-option';
+                item.textContent = eq;
+                item.onclick = () => { select.value = eq; document.getElementById('teamSearchModal').value = eq; list.classList.remove('active'); };
+                list.appendChild(item);
+            });
+            if (filtered.length > 0) list.classList.add('active');
+        }
+
+        function buscarCarreras() {
+            const search = document.getElementById('raceSearch').value.trim();
+            const list = document.getElementById('raceList');
+            const select = document.getElementById('filterRace');
+            list.innerHTML = '';
+            // Si se borra el texto, limpiar el select y refiltrar
+            if (search.length < 1) {
+                select.value = '';
+                list.classList.remove('active');
+                filtrar();
+                return;
+            }
+            const filtered = carreras.filter(c => c.toLowerCase().includes(search.toLowerCase())).slice(0, 15);
+            filtered.forEach(c => {
+                const item = document.createElement('div');
+                item.className = 'team-option';
+                item.textContent = c;
+                item.onclick = () => { select.value = c; document.getElementById('raceSearch').value = c; list.classList.remove('active'); filtrar(); };
+                list.appendChild(item);
+            });
+            if (filtered.length > 0) list.classList.add('active');
+            // Filtrar en tiempo real mientras se escribe
+            filtrar();
+        }
+
+        function buscarCarrerasModal() {
+            const search = document.getElementById('raceSearchModal').value.trim();
+            const list = document.getElementById('raceListModal');
+            const select = document.getElementById('carrera');
+            list.innerHTML = '';
+            if (search.length < 1) { list.classList.remove('active'); return; }
+            const filtered = carreras.filter(c => c.toLowerCase().includes(search.toLowerCase())).slice(0, 15);
+            filtered.forEach(c => {
+                const item = document.createElement('div');
+                item.className = 'team-option';
+                item.textContent = c;
+                item.onclick = () => { select.value = c; document.getElementById('raceSearchModal').value = c; list.classList.remove('active'); };
+                list.appendChild(item);
+            });
+            if (filtered.length > 0) list.classList.add('active');
+        }
+
+        function selectTeamFromDropdown() {
+            const val = document.getElementById('equipo').value;
+            if (val) document.getElementById('teamSearchModal').value = val;
+        }
+
+        function selectRaceFromDropdown() {
+            const val = document.getElementById('carrera').value;
+            if (val) document.getElementById('raceSearchModal').value = val;
+        }
+
+        /* ===== AÑADIR EQUIPO / CARRERA ===== */
+        function añadirEquipo() {
+            if (!currentUser) { showToast('🔐 Inicia sesión primero'); return; }
+            const nuevo = prompt("Nombre del equipo:");
+            if (nuevo && !equipos.includes(nuevo.toUpperCase())) {
+                equipos.push(nuevo.toUpperCase());
+                equipos = [...new Set(equipos)].sort();
+                llenarSelects();
+                showToast('✅ Equipo añadido');
+            }
+        }
+
+        function añadirCarrera() {
+            if (!currentUser) { showToast('🔐 Inicia sesión primero'); return; }
+            const nueva = prompt("Nombre de la carrera:");
+            if (nueva && !carreras.includes(nueva)) {
+                carreras.push(nueva);
+                carreras = [...new Set(carreras)].sort();
+                llenarSelects();
+                showToast('✅ Carrera añadida');
+            }
+        }
+
+        /* ===== COLECCIÓN ===== */
+        async function cargarColeccion() {
+            if (!currentUser) { coleccion = []; actualizarStats(); return; }
+            const dbName = `${DB_NAME}_${currentUser}`;
+            const request = indexedDB.open(dbName, 1);
+            request.onupgradeneeded = (e) => {
+                const database = e.target.result;
+                if (!database.objectStoreNames.contains('coleccion')) {
+                    database.createObjectStore('coleccion', { keyPath: 'id' });
+                }
+            };
+            request.onsuccess = (e) => {
+                const userDb = e.target.result;
+                const tx = userDb.transaction('coleccion', 'readonly');
+                const req = tx.objectStore('coleccion').getAll();
+                req.onsuccess = () => {
+                    coleccion = req.result || [];
+                    coleccion.forEach(item => {
+                        if (item.fotos) item.fotos.forEach((foto, idx) => { fotosDB[`${item.id}_${idx}`] = foto; });
+                    });
+                    actualizarStats();
+                    actualizarFiltroAnos();
+                    filtrar();
+                };
+            };
+        }
+
+        function actualizarFiltroAnos() {
+            const sel = document.getElementById('filterYear');
+            const current = sel.value;
+            sel.innerHTML = '<option value="">Todos</option>';
+            const anos = [...new Set(coleccion.map(i => i.ano))];
+            // Separar 'sin_datos' del resto
+            const hasSinDatos = anos.includes('sin_datos');
+            const anosNumericos = anos.filter(a => a !== 'sin_datos').sort((a, b) => b - a);
+            if (hasSinDatos) {
+                const opt = document.createElement('option');
+                opt.value = 'sin_datos'; opt.textContent = 'Sin datos';
+                sel.appendChild(opt);
+            }
+            anosNumericos.forEach(a => {
+                const opt = document.createElement('option');
+                opt.value = a; opt.textContent = a;
+                sel.appendChild(opt);
+            });
+            sel.value = current;
+        }
+
+        function actualizarStats() {
+            document.getElementById('totalCount').textContent = coleccion.length;
+            const counts = {};
+            categorias.forEach(c => counts[c] = 0);
+            coleccion.forEach(i => { if (counts[i.tipo] !== undefined) counts[i.tipo]++; });
+            const statsContainer = document.getElementById('statsCategories');
+            if (statsContainer) {
+                statsContainer.innerHTML = '';
+                categorias.forEach(cat => {
+                    const icon = iconosCategorias[cat] || '📦';
+                    const count = counts[cat] || 0;
+                    const statDiv = document.createElement('div');
+                    statDiv.className = 'stat-item';
+                    statDiv.innerHTML = `${icon} ${cat}: <span>${count}</span>`;
+                    statsContainer.appendChild(statDiv);
+                });
+            }
+        }
+
+        function ordenarColeccion(items) {
+            return items.sort((a, b) => {
+                // 1. Primero por equipo (alfabético)
+                const equipoCompare = a.equipo.localeCompare(b.equipo);
+                if (equipoCompare !== 0) return equipoCompare;
+                
+                // 2. Luego por categoría (orden específico)
+                const categoriaCompare = (categoriaOrden[a.tipo] || 99) - (categoriaOrden[b.tipo] || 99);
+                if (categoriaCompare !== 0) return categoriaCompare;
+                
+                // 3. Finalmente por año (ascendente)
+                return a.ano - b.ano;
+            });
+        }
+
+        function filtrar() {
+            const txt = document.getElementById('searchText').value.toLowerCase().trim();
+            const tipo = document.getElementById('filterType').value;
+            // Para equipo: usar el select oculto si tiene valor, si no usar el campo de texto
+            const equipoSelect = document.getElementById('filterTeam').value;
+            const equipoTexto = document.getElementById('teamSearch').value.toLowerCase().trim();
+            // Para carrera: usar el select oculto si tiene valor, si no usar el campo de texto
+            const carreraSelect = document.getElementById('filterRace').value;
+            const carreraTexto = document.getElementById('raceSearch').value.toLowerCase().trim();
+            const ano = document.getElementById('filterYear').value;
+            let filtrados = coleccion.filter(i => {
+                // Búsqueda general (equipo o carrera)
+                const matchTxt = !txt || i.equipo.toLowerCase().includes(txt) || (i.carrera && i.carrera.toLowerCase().includes(txt)) || (i.notas && i.notas.toLowerCase().includes(txt));
+                const matchTipo = !tipo || i.tipo === tipo;
+                // Filtro de equipo: si hay valor en el select usar coincidencia exacta, si solo hay texto usar coincidencia parcial
+                let matchEq = true;
+                if (equipoSelect) {
+                    matchEq = i.equipo === equipoSelect;
+                } else if (equipoTexto) {
+                    matchEq = i.equipo.toLowerCase().includes(equipoTexto);
+                }
+                // Filtro de carrera: si hay valor en el select usar coincidencia exacta, si solo hay texto usar coincidencia parcial
+                let matchCarrera = true;
+                if (carreraSelect) {
+                    matchCarrera = i.carrera === carreraSelect;
+                } else if (carreraTexto) {
+                    matchCarrera = i.carrera && i.carrera.toLowerCase().includes(carreraTexto);
+                }
+                const matchAno = !ano || String(i.ano) === ano;
+                return matchTxt && matchTipo && matchEq && matchCarrera && matchAno;
+            });
+            filtrados = ordenarColeccion(filtrados);
+            renderizarGrid(filtrados);
+        }
+
+        /* ===== RENDERIZAR GRID ===== */
+        function renderizarGrid(items) {
+            const grid = document.getElementById('grid');
+            grid.innerHTML = '';
+            if (items.length === 0) {
+                mostrarEstadoVacio('empty');
+                return;
+            }
+            items.forEach((item, index) => {
+                const card = document.createElement('div');
+                card.className = 'card';
+                card.setAttribute('data-id', item.id);
+                card.style.animationDelay = `${Math.min(index * 0.04, 0.4)}s`;
+
+                const numFotos = item.fotos ? item.fotos.length : 0;
+                const layoutClass = numFotos === 0 ? 'layout-1' : `layout-${Math.min(numFotos, 4)}`;
+                const icon = iconosCategorias[item.tipo] || '📦';
+                const color = coloresCategorias[item.tipo] || '#94a3b8';
+
+                let imgsHTML = '';
+                if (numFotos === 0) {
+                    imgsHTML = `<div class="card-no-photo"><div class="no-photo-icon">${icon}</div><div class="no-photo-text">Sin foto</div></div>`;
+                } else {
+                    item.fotos.slice(0, 4).forEach((src, idx) => {
+                        imgsHTML += `<div class="photo-cell"><img src="${src}" loading="lazy" alt="Foto ${idx+1}" onclick="abrirLightbox(${item.id}, ${idx}, event)"></div>`;
+                    });
+                }
+
+                const anoDisplay = item.ano === 'sin_datos' ? 'Sin datos' : item.ano;
+                const metaBadges = `
+                    <span class="meta-badge year">📅 ${anoDisplay}</span>
+                    ${item.carrera ? `<span class="meta-badge race">🏁 ${item.carrera}</span>` : ''}
+                `;
+
+                card.innerHTML = `
+                    <div class="card-image-container ${layoutClass}" style="border-top: 3px solid ${color};">
+                        <span class="card-type">${icon} ${item.tipo}</span>
+                        ${numFotos > 1 ? `<span class="photo-indicator" style="display:block">📷 ${numFotos}</span>` : ''}
+                        ${imgsHTML}
+                        <button class="btn-edit-float auth-required" style="display:${currentUser ? '' : 'none'}" onclick="editarItem(${item.id}, event)" title="Editar">✎</button>
+                    </div>
+                    <div class="card-info">
+                        <div class="card-team">${item.equipo}</div>
+                        <div class="card-meta">${metaBadges}</div>
+                        ${item.notas ? `<div class="card-notes">${item.notas}</div>` : ''}
+                    </div>
+                `;
+                grid.appendChild(card);
+            });
+        }
+
+        /* ===== LIGHTBOX ===== */
+        function abrirLightbox(id, index, event) {
+            event.stopPropagation();
+            const item = coleccion.find(i => i.id === id);
+            if (!item || !item.fotos) return;
+            lightboxFotos = item.fotos;
+            lightboxIndex = index;
+            actualizarLightbox();
+            document.getElementById('lightbox').classList.add('active');
+        }
+
+        function actualizarLightbox() {
+            document.getElementById('lightboxImg').src = lightboxFotos[lightboxIndex];
+            document.getElementById('lightboxCounter').textContent = `${lightboxIndex + 1} / ${lightboxFotos.length}`;
+            document.querySelector('.lightbox-prev').style.display = lightboxFotos.length > 1 ? 'block' : 'none';
+            document.querySelector('.lightbox-next').style.display = lightboxFotos.length > 1 ? 'block' : 'none';
+        }
+
+        function cerrarLightbox() { document.getElementById('lightbox').classList.remove('active'); }
+
+        function cambiarFoto(direction) {
+            lightboxIndex = (lightboxIndex + direction + lightboxFotos.length) % lightboxFotos.length;
+            actualizarLightbox();
+        }
+
+        /* ===== MODAL FORMULARIO ===== */
+        function abrirModal(tipoDefecto = null) {
+            if (!currentUser) { showToast('🔐 Inicia sesión primero'); return; }
+            document.getElementById('form').reset();
+            document.getElementById('itemId').value = '';
+            editId = null;
+            document.getElementById('btnDelete').style.display = 'none';
+            document.getElementById('teamSearchModal').value = '';
+            document.getElementById('raceSearchModal').value = '';
+            llenarSelectAno();
+            document.getElementById('ano').value = '2026';
+            fotosTemporales = [];
+            actualizarGalleryPreview();
+            if (tipoDefecto) document.getElementById('tipo').value = tipoDefecto;
+            document.getElementById('modalTitle').textContent = `Añadir ${tipoDefecto || 'Objeto'}`;
+            document.getElementById('modal').classList.add('active');
+        }
+
+        function editarItem(id, event) {
+            if (!currentUser) { showToast('🔐 Inicia sesión primero'); return; }
+            if (event) event.stopPropagation();
+            const item = coleccion.find(i => i.id === id);
+            if (!item) return;
+            editId = id;
+            document.getElementById('itemId').value = id;
+            document.getElementById('tipo').value = item.tipo;
+            llenarSelectAno();
+            // Manejar 'sin_datos' y años numéricos
+            const anoVal = item.ano === 'sin_datos' || item.ano === null || item.ano === undefined ? 'sin_datos' : String(item.ano);
+            document.getElementById('ano').value = anoVal;
+            document.getElementById('equipo').value = item.equipo;
+            document.getElementById('teamSearchModal').value = item.equipo;
+            document.getElementById('carrera').value = item.carrera || '';
+            document.getElementById('raceSearchModal').value = item.carrera || '';
+            document.getElementById('notas').value = item.notas || '';
+            fotosTemporales = [...(item.fotos || [])];
+            actualizarGalleryPreview();
+            document.getElementById('modalTitle').textContent = `Editar ${item.tipo}`;
+            document.getElementById('btnDelete').style.display = 'block';
+            document.getElementById('modal').classList.add('active');
+        }
+
+        function cerrarModal() {
+            document.getElementById('modal').classList.remove('active');
+            document.querySelectorAll('.team-list').forEach(list => list.classList.remove('active'));
+        }
+
+        /* ===== FOTOS ===== */
+        function procesarFotos(input) {
+            if (!currentUser) { showToast('🔐 Inicia sesión primero'); return; }
+            if (!input.files) return;
+            Array.from(input.files).forEach(file => {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const img = new Image();
+                    img.onload = () => {
+                        const canvas = document.createElement('canvas');
+                        const maxW = 800;
+                        const scale = maxW / img.width;
+                        canvas.width = maxW;
+                        canvas.height = img.height * scale;
+                        canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+                        fotosTemporales.push(canvas.toDataURL('image/jpeg', 0.75));
+                        actualizarGalleryPreview();
+                        setupFotoDragDrop();
+                    };
+                    img.src = e.target.result;
+                };
+                reader.readAsDataURL(file);
+            });
+        }
+
+        function setupFotoDragDrop() {
+            const items = document.querySelectorAll('.gallery-item');
+            let draggedItem = null;
+            
+            items.forEach(item => {
+                item.draggable = true;
+                item.addEventListener('dragstart', function(e) {
+                    draggedItem = this;
+                    this.classList.add('dragging');
+                    e.dataTransfer.effectAllowed = 'move';
+                });
+                item.addEventListener('dragover', (e) => {
+                    e.preventDefault();
+                    e.dataTransfer.dropEffect = 'move';
+                    if (draggedItem && draggedItem !== item) {
+                        item.parentNode.insertBefore(draggedItem, item);
+                    }
+                });
+                item.addEventListener('dragend', function() {
+                    this.classList.remove('dragging');
+                    const container = this.parentNode;
+                    fotosTemporales = Array.from(container.querySelectorAll('.gallery-item img')).map(img => img.src);
+                    draggedItem = null;
+                });
+            });
+        }
+
+        function actualizarGalleryPreview() {
+            const container = document.getElementById('galleryPreview');
+            container.innerHTML = '';
+            fotosTemporales.forEach((src, index) => {
+                const div = document.createElement('div');
+                div.className = 'gallery-item';
+                div.draggable = true;
+                div.innerHTML = `<img src="${src}" alt="Foto ${index+1}"><button type="button" class="gallery-remove" onclick="borrarFoto(${index})">×</button>`;
+                container.appendChild(div);
+            });
+            setupFotoDragDrop();
+        }
+
+        function borrarFoto(index) {
+            fotosTemporales.splice(index, 1);
+            actualizarGalleryPreview();
+        }
+
+        /* ===== GUARDAR / ELIMINAR ===== */
+        function guardar(e) {
+            e.preventDefault();
+            if (!currentUser) { showToast('🔐 Inicia sesión primero'); return; }
+            const anoRaw = document.getElementById('ano').value;
+            const anoVal = anoRaw === 'sin_datos' ? 'sin_datos' : parseInt(anoRaw);
+            const item = {
+                id: editId || Date.now(),
+                tipo: document.getElementById('tipo').value,
+                ano: anoVal,
+                equipo: document.getElementById('equipo').value,
+                carrera: document.getElementById('carrera').value.trim(),
+                notas: document.getElementById('notas').value.trim(),
+                fotos: [...fotosTemporales],
+                fecha: new Date().toISOString(),
+                usuario: currentUser
+            };
+            const dbName = `${DB_NAME}_${currentUser}`;
+            const request = indexedDB.open(dbName, 1);
+            request.onupgradeneeded = (e) => {
+                const database = e.target.result;
+                if (!database.objectStoreNames.contains('coleccion')) {
+                    database.createObjectStore('coleccion', { keyPath: 'id' });
+                }
+            };
+            request.onsuccess = (e) => {
+                const userDb = e.target.result;
+                const tx = userDb.transaction('coleccion', 'readwrite');
+                tx.objectStore('coleccion').put(item);
+                tx.oncomplete = () => { cerrarModal(); cargarColeccion(); showToast('✅ Guardado correctamente'); };
+            };
+        }
+
+        function eliminarItem() {
+            if (!currentUser) { showToast('🔐 Inicia sesión primero'); return; }
+            if (!editId || !confirm('¿Eliminar este objeto?')) return;
+            const dbName = `${DB_NAME}_${currentUser}`;
+            const request = indexedDB.open(dbName, 1);
+            request.onsuccess = (e) => {
+                const userDb = e.target.result;
+                const tx = userDb.transaction('coleccion', 'readwrite');
+                tx.objectStore('coleccion').delete(editId);
+                tx.oncomplete = () => { cerrarModal(); cargarColeccion(); showToast('🗑️ Objeto eliminado'); };
+            };
+        }
+
+        /* ===== TOAST ===== */
+        function showToast(msg) {
+            const t = document.getElementById('toast');
+            t.textContent = msg;
+            t.classList.add('show');
+            setTimeout(() => t.classList.remove('show'), 2500);
+        }
+
+        /* ===== ESTADÍSTICAS ===== */
+        function verEstadisticas() {
+            if (!currentUser) { showToast('🔐 Inicia sesión primero'); return; }
+            const stats = generarEstadisticas();
+            mostrarModalEstadisticas(stats);
+        }
+
+        function generarEstadisticas() {
+            const totalObjetos = coleccion.length;
+            const totalFotos = coleccion.reduce((sum, item) => sum + (item.fotos ? item.fotos.length : 0), 0);
+            const categoriasActivas = categorias.filter(cat => coleccion.some(i => i.tipo === cat)).length;
+            const equiposActivos = [...new Set(coleccion.map(i => i.equipo))].length;
+            const anosCount = {};
+            const equiposCount = {};
+            const catsCount = {};
+            coleccion.forEach(i => {
+                anosCount[i.ano] = (anosCount[i.ano] || 0) + 1;
+                equiposCount[i.equipo] = (equiposCount[i.equipo] || 0) + 1;
+                catsCount[i.tipo] = (catsCount[i.tipo] || 0) + 1;
+            });
+            const anoTop = Object.entries(anosCount).sort((a,b) => b[1]-a[1])[0];
+            const equipoTop = Object.entries(equiposCount).sort((a,b) => b[1]-a[1])[0];
+            const catTop = Object.entries(catsCount).sort((a,b) => b[1]-a[1])[0];
+            return { totalObjetos, totalFotos, categoriasActivas, equiposActivos,
+                anoTop: anoTop ? { ano: anoTop[0], count: anoTop[1] } : null,
+                equipoTop: equipoTop ? { equipo: equipoTop[0], count: equipoTop[1] } : null,
+                catTop: catTop ? { cat: catTop[0], count: catTop[1] } : null, coleccion };
+        }
+
+        function mostrarModalEstadisticas(stats) {
+            const maxCat = Math.max(...categorias.map(cat => coleccion.filter(i => i.tipo === cat).length), 1);
+            const content = document.getElementById('statsContent');
+            content.innerHTML = `
+                <div class="stats-grid">
+                    <div class="stat-card"><h3>${stats.totalObjetos}</h3><p>📦 Total Objetos</p></div>
+                    <div class="stat-card" style="background: linear-gradient(135deg, #10b981, #059669);"><h3>${stats.totalFotos}</h3><p>📸 Total Fotos</p></div>
+                    <div class="stat-card" style="background: linear-gradient(135deg, #f59e0b, #d97706);"><h3>${stats.categoriasActivas}</h3><p>📋 Categorías Activas</p></div>
+                    <div class="stat-card" style="background: linear-gradient(135deg, #06b6d4, #0891b2);"><h3>${stats.equiposActivos}</h3><p>🏆 Equipos Activos</p></div>
+                </div>
+                <div class="top-items">
+                    <h3>🏆 Highlights</h3>
+                    ${stats.anoTop ? `<div class="top-item"><span>📅 Año con más objetos</span><strong>${stats.anoTop.ano} (${stats.anoTop.count})</strong></div>` : ''}
+                    ${stats.equipoTop ? `<div class="top-item"><span>🚴 Equipo con más objetos</span><strong>${stats.equipoTop.equipo} (${stats.equipoTop.count})</strong></div>` : ''}
+                    ${stats.catTop ? `<div class="top-item"><span>📦 Categoría con más objetos</span><strong>${stats.catTop.cat} (${stats.catTop.count})</strong></div>` : ''}
+                </div>
+                <div class="top-items" style="margin-top: 12px;">
+                    <h3>📊 Desglose por Categoría</h3>
+                    ${categorias.map(cat => {
+                        const count = coleccion.filter(i => i.tipo === cat).length;
+                        const pct = Math.round((count / maxCat) * 100);
+                        const color = coloresCategorias[cat] || '#94a3b8';
+                        return `<div class="top-item" style="flex-direction: column; align-items: flex-start; gap: 4px;">
+                            <div style="display:flex; justify-content:space-between; width:100%;">
+                                <span>${iconosCategorias[cat] || '📦'} ${cat}</span>
+                                <strong style="color: ${color};">${count}</strong>
+                            </div>
+                            <div class="stat-progress" style="width:100%;">
+                                <div class="stat-progress-bar" style="width:${pct}%; background: linear-gradient(90deg, ${color}, ${color}99);"></div>
+                            </div>
+                        </div>`;
+                    }).join('')}
+                </div>
+            `;
+            document.getElementById('statsModal').classList.add('active');
+        }
+
+        function cerrarStatsModal() { document.getElementById('statsModal').classList.remove('active'); }
+
+        let ordenacionActual = 'predeterminada';
+
+        /* ===== GOOGLE DRIVE SYNC ===== */
+        let gapiInited = false;
+        let gisInited = false;
+        let tokenClient;
+        let accessToken = null;
+
+        function gapiLoaded() { gapi.load('client', () => { gapiInited = true; checkSyncConfig(); }); }
+        function gisLoaded() { gisInited = true; checkSyncConfig(); }
+
+        function checkSyncConfig() {
+            const config = JSON.parse(localStorage.getItem('gdrive_config') || '{}');
+            if (config.clientId && config.apiKey) {
+                document.getElementById('gdriveClientId').value = config.clientId;
+                document.getElementById('gdriveApiKey').value = config.apiKey;
+                if (gapiInited && gisInited) initGdriveClient(config);
+            }
+        }
+
+        async function initGdriveClient(config) {
+            try {
+                await gapi.client.init({ apiKey: config.apiKey, discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/drive/v3/rest'] });
+                tokenClient = google.accounts.oauth2.initTokenClient({
+                    client_id: config.clientId,
+                    scope: 'https://www.googleapis.com/auth/drive.file',
+                    callback: (resp) => { if (resp.access_token) { accessToken = resp.access_token; mostrarSyncActions(); } }
+                });
+            } catch (err) { console.error('Error init GDrive:', err); }
+        }
+
+        function abrirSyncModal() {
+            const config = JSON.parse(localStorage.getItem('gdrive_config') || '{}');
+            if (config.clientId && config.apiKey && config.clientId.trim() && config.apiKey.trim()) {
+                if (accessToken) {
+                    mostrarSyncActions();
+                } else if (tokenClient) {
+                    tokenClient.requestAccessToken({ prompt: '' });
+                } else {
+                    showToast('⚠️ Reinicia la página para conectar con Google Drive');
+                }
+            }
+            document.getElementById('syncModal').classList.add('active');
+        }
+
+        function cerrarSyncModal() { document.getElementById('syncModal').classList.remove('active'); }
+
+        function guardarConfigSync() {
+            const clientId = document.getElementById('gdriveClientId').value.trim();
+            const apiKey = document.getElementById('gdriveApiKey').value.trim();
+            if (!clientId || !apiKey) { showToast('❌ Faltan datos'); return; }
+            localStorage.setItem('gdrive_config', JSON.stringify({ clientId, apiKey }));
+            initGdriveClient({ clientId, apiKey }).then(() => {
+                if (tokenClient) {
+                    tokenClient.requestAccessToken({ prompt: 'consent' });
+                    showToast('✅ Credenciales guardadas. Autoriza el acceso.');
+                } else {
+                    showToast('⚠️ Reinicia la página para completar la autorización');
+                }
+            }).catch(err => {
+                showToast('❌ Error: ' + err.message);
+            });
+        }
+
+        function mostrarSyncActions() {
+            document.getElementById('syncSetup').style.display = 'none';
+            document.getElementById('syncActions').style.display = 'block';
+            const last = localStorage.getItem('gdrive_last_sync');
+            if (last) document.getElementById('lastSyncInfo').textContent = `Última sincronización: ${new Date(last).toLocaleString()}`;
+        }
+
+        function desconectarDrive() {
+            localStorage.removeItem('gdrive_config');
+            localStorage.removeItem('gdrive_last_sync');
+            accessToken = null;
+            document.getElementById('syncSetup').style.display = 'block';
+            document.getElementById('syncActions').style.display = 'none';
+            showToast('🔌 Desconectado');
+        }
+
+        async function backupToDrive() {
+            if (!currentUser) { showToast('🔐 Inicia sesión primero'); return; }
+            if (!accessToken) { showToast('❌ No estás conectado a Google Drive. Autoriza primero.'); return; }
+            showToast('⏳ Preparando backup...');
+            const dbName = `${DB_NAME}_${currentUser}`;
+            const request = indexedDB.open(dbName, 1);
+            request.onsuccess = (e) => {
+                const userDb = e.target.result;
+                const req = userDb.transaction('coleccion', 'readonly').objectStore('coleccion').getAll();
+                req.onsuccess = async () => {
+                    const data = { categorias, equipos, carreras, coleccion: req.result || [], usuario: currentUser, timestamp: new Date().toISOString() };
+                    const blob = new Blob([JSON.stringify(data)], { type: 'application/json' });
+                    
+                    try {
+                        // Buscar si ya existe el archivo
+                        const searchResp = await gapi.client.drive.files.list({ q: `name = 'coleccion_ciclista_backup_${currentUser}.json' and trashed = false`, fields: 'files(id)' });
+                        const existingFile = searchResp.result.files[0];
+                        
+                        const metadata = { name: `coleccion_ciclista_backup_${currentUser}.json`, mimeType: 'application/json' };
+                        const form = new FormData();
+                        form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
+                        form.append('file', blob);
+
+                        let url = 'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart';
+                        let method = 'POST';
+                        if (existingFile) {
+                            url = `https://www.googleapis.com/upload/drive/v3/files/${existingFile.id}?uploadType=multipart`;
+                            method = 'PATCH';
+                        }
+
+                        const resp = await fetch(url, { method, headers: { 'Authorization': `Bearer ${accessToken}` }, body: form });
+                        if (resp.ok) {
+                            localStorage.setItem('gdrive_last_sync', new Date().toISOString());
+                            mostrarSyncActions();
+                            showToast('✅ Subido a Google Drive');
+                        } else { throw new Error('Error al subir'); }
+                    } catch (err) { showToast('❌ Error: ' + err.message); }
+                };
+            };
+        }
+
+        async function restoreFromDrive() {
+            if (!currentUser) { showToast('🔐 Inicia sesión primero'); return; }
+            if (!accessToken) { showToast('❌ No estás conectado a Google Drive. Autoriza primero.'); return; }
+            try {
+                showToast('⏳ Buscando en la nube...');
+                const searchResp = await gapi.client.drive.files.list({ q: `name = 'coleccion_ciclista_backup_${currentUser}.json' and trashed = false`, fields: 'files(id)' });
+                const existingFile = searchResp.result.files[0];
+                if (!existingFile) { showToast('❌ No hay backup en Drive'); return; }
+
+                const fileResp = await fetch(`https://www.googleapis.com/drive/v3/files/${existingFile.id}?alt=media`, { headers: { 'Authorization': `Bearer ${accessToken}` } });
+                const data = await fileResp.json();
+
+                if (confirm(`¿Descargar backup de "${new Date(data.timestamp).toLocaleString()}"? Esto sobrescribirá tus datos actuales.`)) {
+                    const request = indexedDB.open(`${DB_NAME}_${currentUser}`, 1);
+                    request.onsuccess = (e) => {
+                        const userDb = e.target.result;
+                        const tx = userDb.transaction('coleccion', 'readwrite');
+                        const store = tx.objectStore('coleccion');
+                        store.clear();
+                        (data.coleccion || []).forEach(i => store.put(i));
+                        tx.oncomplete = () => {
+                            if (data.categorias) categorias = data.categorias;
+                            if (data.equipos) equipos = data.equipos;
+                            if (data.carreras) carreras = data.carreras;
+                            renderizarCategorias();
+                            llenarSelects();
+                            cargarColeccion();
+                            showToast('✅ Restaurado desde Drive');
+                            cerrarSyncModal();
+                        };
+                    };
+                }
+            } catch (err) { showToast('❌ Error: ' + err.message); }
+        }
+
+        function abrirAdvancedSearch() {
+            // Llenar select de equipos
+            const sel = document.getElementById('advEquipo');
+            sel.innerHTML = '<option value="">Todos los equipos</option>';
+            [...new Set(coleccion.map(i => i.equipo))].sort().forEach(eq => {
+                const opt = document.createElement('option');
+                opt.value = eq; opt.textContent = eq;
+                sel.appendChild(opt);
+            });
+            // Llenar select de categorías
+            const selCat = document.getElementById('advCategoria');
+            selCat.innerHTML = '<option value="">Todas las categorías</option>';
+            categorias.forEach(c => {
+                const opt = document.createElement('option');
+                opt.value = c; opt.textContent = c;
+                selCat.appendChild(opt);
+            });
+            // Llenar select de carreras
+            const selCarrera = document.getElementById('advCarreraSelect');
+            if (selCarrera) {
+                selCarrera.innerHTML = '<option value="">Todas las carreras</option>';
+                [...new Set(coleccion.map(i => i.carrera).filter(Boolean))].sort().forEach(cr => {
+                    const opt = document.createElement('option');
+                    opt.value = cr; opt.textContent = cr;
+                    selCarrera.appendChild(opt);
+                });
+            }
+            // Llenar selects de rango de años
+            const anos = [...new Set(coleccion.map(i => i.ano))]
+                .filter(a => a !== 'sin_datos')
+                .sort((a, b) => a - b);
+            const selAnoMin = document.getElementById('advAnoMin');
+            const selAnoMax = document.getElementById('advAnoMax');
+            if (selAnoMin) {
+                selAnoMin.innerHTML = '<option value="">Sin límite</option>';
+                anos.forEach(a => {
+                    const opt = document.createElement('option');
+                    opt.value = a; opt.textContent = a;
+                    selAnoMin.appendChild(opt);
+                });
+            }
+            if (selAnoMax) {
+                selAnoMax.innerHTML = '<option value="">Sin límite</option>';
+                [...anos].reverse().forEach(a => {
+                    const opt = document.createElement('option');
+                    opt.value = a; opt.textContent = a;
+                    selAnoMax.appendChild(opt);
+                });
+            }
+            document.getElementById('advancedSearchModal').classList.add('active');
+        }
+
+        function cerrarAdvancedSearch() {
+            document.getElementById('advancedSearchModal').classList.remove('active');
+        }
+
+        /* Función auxiliar: comparar por un criterio */
+        function compararPorCriterio(a, b, criterio) {
+            if (!criterio) return 0;
+            const [campo, dir] = criterio.split('_');
+            let valA, valB;
+            if (campo === 'equipo') { valA = (a.equipo || '').toLowerCase(); valB = (b.equipo || '').toLowerCase(); }
+            else if (campo === 'ano') {
+                valA = a.ano === 'sin_datos' ? 9999 : (parseInt(a.ano) || 0);
+                valB = b.ano === 'sin_datos' ? 9999 : (parseInt(b.ano) || 0);
+                return dir === 'asc' ? valA - valB : valB - valA;
+            }
+            else if (campo === 'categoria') { valA = (a.tipo || '').toLowerCase(); valB = (b.tipo || '').toLowerCase(); }
+            else if (campo === 'carrera') { valA = (a.carrera || '').toLowerCase(); valB = (b.carrera || '').toLowerCase(); }
+            else return 0;
+            if (valA < valB) return dir === 'asc' ? -1 : 1;
+            if (valA > valB) return dir === 'asc' ? 1 : -1;
+            return 0;
+        }
+
+        function aplicarOrdenacionAvanzada() {
+            // Compatibilidad con código antiguo
+            aplicarBusquedaAvanzada();
+        }
+
+        function restablecerOrdenacion() {
+            ordenacionActual = 'predeterminada';
+            const fields = ['advAnoMin','advAnoMax','advEquipo','advEquipoTexto','advCategoria',
+                            'advCarreraSelect','advCarrera','advTextoLibre','sortCrit1','sortCrit2','sortCrit3'];
+            fields.forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.value = '';
+            });
+            filtrar();
+            cerrarAdvancedSearch();
+            showToast('🔄 Orden predeterminado restaurado');
+        }
+
+        function aplicarBusquedaAvanzada() {
+            // Obtener criterios de ordenación
+            const crit1 = document.getElementById('sortCrit1') ? document.getElementById('sortCrit1').value : '';
+            const crit2 = document.getElementById('sortCrit2') ? document.getElementById('sortCrit2').value : '';
+            const crit3 = document.getElementById('sortCrit3') ? document.getElementById('sortCrit3').value : '';
+
+            // Obtener filtros
+            const anoMinVal = document.getElementById('advAnoMin') ? document.getElementById('advAnoMin').value : '';
+            const anoMaxVal = document.getElementById('advAnoMax') ? document.getElementById('advAnoMax').value : '';
+            const anoMin = anoMinVal ? parseInt(anoMinVal) : null;
+            const anoMax = anoMaxVal ? parseInt(anoMaxVal) : null;
+
+            const equipoSelect = document.getElementById('advEquipo') ? document.getElementById('advEquipo').value.toLowerCase() : '';
+            const equipoTexto = document.getElementById('advEquipoTexto') ? document.getElementById('advEquipoTexto').value.toLowerCase().trim() : '';
+            const equipoFiltro = equipoSelect || equipoTexto;
+
+            const categoria = document.getElementById('advCategoria') ? document.getElementById('advCategoria').value : '';
+
+            const carreraSelect = document.getElementById('advCarreraSelect') ? document.getElementById('advCarreraSelect').value.toLowerCase() : '';
+            const carreraTexto = document.getElementById('advCarrera') ? document.getElementById('advCarrera').value.toLowerCase().trim() : '';
+            const carreraFiltro = carreraSelect || carreraTexto;
+
+            const textoLibre = document.getElementById('advTextoLibre') ? document.getElementById('advTextoLibre').value.toLowerCase().trim() : '';
+
+            let items = coleccion.filter(item => {
+                // Filtro año
+                if (anoMin !== null && item.ano !== 'sin_datos' && parseInt(item.ano) < anoMin) return false;
+                if (anoMax !== null && item.ano !== 'sin_datos' && parseInt(item.ano) > anoMax) return false;
+                // Filtro equipo
+                if (equipoFiltro && !item.equipo.toLowerCase().includes(equipoFiltro)) return false;
+                // Filtro categoría
+                if (categoria && item.tipo !== categoria) return false;
+                // Filtro carrera
+                if (carreraFiltro && !(item.carrera || '').toLowerCase().includes(carreraFiltro)) return false;
+                // Filtro texto libre
+                if (textoLibre) {
+                    const haystack = [item.equipo, item.carrera, item.notas].filter(Boolean).join(' ').toLowerCase();
+                    if (!haystack.includes(textoLibre)) return false;
+                }
+                return true;
+            });
+
+            // Aplicar ordenación múltiple
+            if (crit1 || crit2 || crit3) {
+                items.sort((a, b) => {
+                    let r = 0;
+                    if (crit1) r = compararPorCriterio(a, b, crit1);
+                    if (r === 0 && crit2) r = compararPorCriterio(a, b, crit2);
+                    if (r === 0 && crit3) r = compararPorCriterio(a, b, crit3);
+                    return r;
+                });
+            }
+
+            renderizarGrid(items);
+            cerrarAdvancedSearch();
+            showToast(`✅ ${items.length} resultado(s) encontrado(s)`);
+        }
+
+        let resultadosFiltrados = [];
+
+        function convertImageToJPEG(dataUrl) {
+            return new Promise((resolve) => {
+                if (!dataUrl || typeof dataUrl !== 'string') return resolve(null);
+                const img = new Image();
+                img.crossOrigin = 'anonymous';
+                img.onload = () => {
+                    try {
+                        const canvas = document.createElement('canvas');
+                        canvas.width = img.width;
+                        canvas.height = img.height;
+                        const ctx = canvas.getContext('2d');
+                        ctx.fillStyle = 'white';
+                        ctx.fillRect(0, 0, canvas.width, canvas.height);
+                        ctx.drawImage(img, 0, 0);
+                        resolve(canvas.toDataURL('image/jpeg', 0.8));
+                    } catch (e) {
+                        console.error('Canvas error:', e);
+                        resolve(null);
+                    }
+                };
+                img.onerror = (err) => {
+                    console.error('Image load error:', err);
+                    resolve(null);
+                };
+                img.src = dataUrl;
+            });
+        }
+
+        async function exportarResultadosPDF() {
+            if (!currentUser) { showToast('🔐 Inicia sesión primero'); return; }
+            const items = document.querySelectorAll('.card');
+            if (items.length === 0) { showToast('❌ No hay resultados para exportar'); return; }
+            
+            // Obtener artículos en el orden que aparecen en pantalla
+            const itemsOrdenados = Array.from(items).map(cardEl => {
+                const id = parseInt(cardEl.getAttribute('data-id'));
+                return coleccion.find(item => item.id === id);
+            }).filter(item => item !== undefined);
+            
+            resultadosFiltrados = itemsOrdenados.length > 0 ? itemsOrdenados : coleccion;
+            
+            showToast('⏳ Generando PDF con imágenes...');
+            
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+            const pageWidth = doc.internal.pageSize.getWidth();
+            const pageHeight = doc.internal.pageSize.getHeight();
+            const margin = 8;
+            const colsPerPage = 5;
+            const gap = 3;
+            const imgWidth = (pageWidth - margin * 2 - (colsPerPage - 1) * gap) / colsPerPage;
+            const imgHeight = imgWidth * 0.9;
+            const textHeight = 9;
+            
+            // Título
+            doc.setFontSize(14);
+            doc.setTextColor(99, 102, 241);
+            doc.text('📋 Catálogo de Colección Ciclista', pageWidth / 2, margin + 6, { align: 'center' });
+            doc.setFontSize(8);
+            doc.setTextColor(150, 150, 150);
+            doc.text(`${new Date().toLocaleDateString('es-ES')} | ${resultadosFiltrados.length} artículos`, pageWidth / 2, margin + 10, { align: 'center' });
+            
+            let yPos = margin + 16;
+            let xPos = margin;
+            let colCount = 0;
+            
+            // Procesar cada artículo
+            for (let idx = 0; idx < resultadosFiltrados.length; idx++) {
+                const item = resultadosFiltrados[idx];
+                
+                // Nueva página si es necesario
+                if (yPos + imgHeight + textHeight > pageHeight - margin) {
+                    doc.addPage();
+                    yPos = margin;
+                    xPos = margin;
+                    colCount = 0;
+                }
+                
+                // Dibujar rectángulo gris claro para la imagen
+                doc.setFillColor(240, 240, 240);
+                doc.rect(xPos, yPos, imgWidth, imgHeight, 'F');
+                
+                // Añadir imagen si existe
+                const fotoRaw = (item.fotos && item.fotos.length > 0) ? item.fotos[0] : null;
+                const imgData = (fotoRaw && typeof fotoRaw === 'object') ? fotoRaw.data : fotoRaw;
+
+                if (imgData && imgData.startsWith('data:image')) {
+                    try {
+                        // Convertir a JPEG compatible para jsPDF
+                        const jpegData = await convertImageToJPEG(imgData);
+                        if (jpegData) {
+                            doc.addImage(jpegData, 'JPEG', xPos + 0.5, yPos + 0.5, imgWidth - 1, imgHeight - 1);
+                        } else {
+                            throw new Error('Conversión fallida');
+                        }
+                    } catch (e) {
+                        console.error('Error al procesar imagen para PDF:', e);
+                        doc.setFillColor(230, 230, 230);
+                        doc.setFontSize(10);
+                        doc.text('⚠️', xPos + imgWidth / 2, yPos + imgHeight / 2, { align: 'center' });
+                    }
+                } else {
+                    doc.setFillColor(220, 220, 220);
+                    doc.setFontSize(8);
+                    doc.setTextColor(150, 150, 150);
+                    doc.text('📭', xPos + imgWidth / 2, yPos + imgHeight / 2, { align: 'center' });
+                }
+                
+                // Texto bajo la imagen (más compacto)
+                doc.setFontSize(7);
+                doc.setTextColor(40, 40, 40);
+                doc.setFont(undefined, 'bold');
+                const equipoText = item.equipo.length > 12 ? item.equipo.substring(0, 12) + '...' : item.equipo;
+                doc.text(equipoText, xPos + imgWidth / 2, yPos + imgHeight + 3, { align: 'center', maxWidth: imgWidth - 0.5 });
+                
+                doc.setFont(undefined, 'normal');
+                doc.setTextColor(100, 100, 100);
+                doc.setFontSize(6);
+                doc.text(`${item.ano}`, xPos + imgWidth / 2, yPos + imgHeight + 6.5, { align: 'center' });
+                
+                // Actualizar posición
+                colCount++;
+                if (colCount >= colsPerPage) {
+                    xPos = margin;
+                    yPos += imgHeight + textHeight + 2;
+                    colCount = 0;
+                } else {
+                    xPos += imgWidth + gap;
+                }
+            }
+            
+            doc.save(`coleccion_filtrada_${new Date().getTime()}.pdf`);
+            showToast('✅ PDF de catálogo generado correctamente');
+        }
+
+        function exportarResultadosExcel() {
+            if (!currentUser) { showToast('🔐 Inicia sesión primero'); return; }
+            const items = document.querySelectorAll('.card');
+            if (items.length === 0) { showToast('❌ No hay resultados para exportar'); return; }
+            resultadosFiltrados = coleccion.filter(item => document.querySelector(`[data-id="${item.id}"]`));
+            if (resultadosFiltrados.length === 0) resultadosFiltrados = coleccion;
+            const wb = XLSX.utils.book_new();
+            const ws_data = [['#', 'Equipo', 'Categoría', 'Año', 'Carrera', 'Fotos', 'Notas']];
+            resultadosFiltrados.forEach((item, idx) => {
+                ws_data.push([
+                    idx + 1,
+                    item.equipo,
+                    item.tipo,
+                    item.ano,
+                    item.carrera,
+                    item.fotos ? item.fotos.length : 0,
+                    item.notas || ''
+                ]);
+            });
+            const ws = XLSX.utils.aoa_to_sheet(ws_data);
+            ws['!cols'] = [{wch: 4}, {wch: 20}, {wch: 15}, {wch: 8}, {wch: 20}, {wch: 8}, {wch: 30}];
+            XLSX.utils.book_append_sheet(wb, ws, 'Colección');
+            XLSX.writeFile(wb, `coleccion_filtrada_${new Date().getTime()}.xlsx`);
+            showToast('✅ Excel exportado correctamente');
+        }
+
+
+        /* ===== EXPORTAR PDF ===== */
+        function exportarReportePDF() {
+            const stats = generarEstadisticas();
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            doc.setFontSize(20);
+            doc.setTextColor(99, 102, 241);
+            doc.text('Informe de Coleccion Ciclista', 14, 20);
+            doc.setFontSize(10);
+            doc.setTextColor(100);
+            doc.text(`Usuario: ${currentUser} - ${new Date().toLocaleDateString()}`, 14, 30);
+            doc.setFontSize(14);
+            doc.setTextColor(0);
+            doc.text('Resumen General', 14, 45);
+            doc.autoTable({ startY: 50, head: [['Concepto', 'Cantidad']], body: [['Total Objetos', stats.totalObjetos], ['Total Fotos', stats.totalFotos], ['Categorias Activas', stats.categoriasActivas], ['Equipos Activos', stats.equiposActivos]], theme: 'striped', headStyles: { fillColor: [99, 102, 241] } });
+            let yPos = doc.lastAutoTable.finalY + 10;
+            const topData = [];
+            if (stats.anoTop) topData.push(['Ano con mas objetos', `${stats.anoTop.ano} (${stats.anoTop.count} objetos)`]);
+            if (stats.equipoTop) topData.push(['Equipo con mas objetos', `${stats.equipoTop.equipo} (${stats.equipoTop.count} objetos)`]);
+            if (stats.catTop) topData.push(['Categoria con mas objetos', `${stats.catTop.cat} (${stats.catTop.count} objetos)`]);
+            if (topData.length > 0) {
+                doc.text('Top Coleccion', 14, yPos);
+                doc.autoTable({ startY: yPos + 5, head: [['Categoria', 'Detalle']], body: topData, theme: 'striped', headStyles: { fillColor: [16, 185, 129] } });
+                yPos = doc.lastAutoTable.finalY + 10;
+            }
+            doc.text('Desglose por Categoria', 14, yPos);
+            const catData = categorias.map(cat => [cat, coleccion.filter(i => i.tipo === cat).length]);
+            doc.autoTable({ startY: yPos + 5, head: [['Categoria', 'Cantidad']], body: catData, theme: 'striped', headStyles: { fillColor: [245, 158, 11] } });
+            doc.save(`Reporte_Coleccion_${currentUser}_${new Date().toISOString().split('T')[0]}.pdf`);
+            showToast('📄 PDF generado');
+        }
+
+        /* ===== EXPORTAR EXCEL ===== */
+        function exportarReporteExcel() {
+            const stats = generarEstadisticas();
+            const wb = XLSX.utils.book_new();
+            const resumenData = [['RESUMEN DE COLECCIÓN'], ['Usuario', currentUser], ['Fecha', new Date().toLocaleDateString()], [], ['Total Objetos', stats.totalObjetos], ['Total Fotos', stats.totalFotos], ['Categorías Activas', stats.categoriasActivas], ['Equipos Activos', stats.equiposActivos]];
+            XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(resumenData), 'Resumen');
+            const catData = [['Categoría', 'Cantidad']];
+            categorias.forEach(cat => catData.push([cat, coleccion.filter(i => i.tipo === cat).length]));
+            XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(catData), 'Categorías');
+            const coleccionData = coleccion.map(item => ({ 'ID': String(item.id), 'Tipo': item.tipo, 'Equipo': item.equipo, 'Año': item.ano, 'Carrera': item.carrera || '', 'Notas': item.notas || '', 'Fotos': item.fotos ? item.fotos.length : 0 }));
+            const wsColeccion = XLSX.utils.json_to_sheet(coleccionData);
+            const range = XLSX.utils.decode_range(wsColeccion['!ref']);
+            for (let R = range.s.r + 1; R <= range.e.r; ++R) {
+                const cellAddress = XLSX.utils.encode_cell({r: R, c: 0});
+                if (wsColeccion[cellAddress]) { wsColeccion[cellAddress].t = 's'; wsColeccion[cellAddress].z = '@'; }
+            }
+            XLSX.utils.book_append_sheet(wb, wsColeccion, 'Colección');
+            XLSX.writeFile(wb, `Reporte_Coleccion_${currentUser}_${new Date().toISOString().split('T')[0]}.xlsx`);
+            showToast('📊 Excel generado');
+        }
+
+        /* ===== DROPDOWN FOTOS ===== */
+        function toggleFotoDropdown() {
+            if (!currentUser) { showToast('🔐 Inicia sesión primero'); return; }
+            document.getElementById('fotoDropdown').classList.toggle('active');
+        }
+
+        /* ===== EXPORTAR / IMPORTAR ===== */
+        function prepararExportar() {
+            if (!currentUser) { showToast('🔐 Inicia sesión primero'); return; }
+            exportAction = 'json';
+            mostrarSeleccionUsuario('export');
+        }
+
+        function prepararExportarExcel() {
+            if (!currentUser) { showToast('🔐 Inicia sesión primero'); return; }
+            exportAction = 'excel';
+            mostrarSeleccionUsuario('export');
+        }
+
+        function prepararExportarFotos(formato) {
+            if (!currentUser) { showToast('🔐 Inicia sesión primero'); return; }
+            exportAction = 'fotos';
+            pendingFotoFormat = formato;
+            document.getElementById('fotoDropdown').classList.remove('active');
+            mostrarSeleccionUsuario('export');
+        }
+
+        function prepararImportar() {
+            if (!currentUser) { showToast('🔐 Inicia sesión primero'); return; }
+            exportAction = 'importar';
+            mostrarSeleccionUsuario('import');
+        }
+
+        function mostrarSeleccionUsuario(accion) {
+            const modal = document.getElementById('userSelectModal');
+            const dropdown = document.getElementById('userSelectDropdown');
+            const title = document.getElementById('userSelectTitle');
+            const label = document.getElementById('userSelectLabel');
+            const confirmBtn = document.getElementById('userSelectConfirm');
+            dropdown.innerHTML = '';
+            if (accion === 'export') {
+                title.textContent = 'Exportar datos de:';
+                label.textContent = 'Selecciona el usuario cuya base de datos quieres exportar:';
+                confirmBtn.textContent = 'Exportar';
+                confirmBtn.onclick = () => { pendingExportUser = dropdown.value; cerrarUserSelectModal(); ejecutarExportar(); };
+            } else {
+                title.textContent = 'Importar datos a:';
+                label.textContent = 'Selecciona el usuario al que quieres importar los datos:';
+                confirmBtn.textContent = 'Importar';
+                confirmBtn.onclick = () => { pendingExportUser = dropdown.value; cerrarUserSelectModal(); document.getElementById('fotoInput').click(); };
+            }
+            Object.keys(usuarios).forEach(user => {
+                const opt = document.createElement('option');
+                opt.value = user; opt.textContent = user;
+                dropdown.appendChild(opt);
+            });
+            modal.classList.add('active');
+        }
+
+        function cerrarUserSelectModal() { document.getElementById('userSelectModal').classList.remove('active'); }
+
+        function ejecutarExportar() {
+            if (exportAction === 'json') exportarDatos(pendingExportUser);
+            else if (exportAction === 'excel') exportarExcel(pendingExportUser);
+            else if (exportAction === 'fotos') exportarFotosZIP(pendingExportUser, pendingFotoFormat);
+        }
+
+        function exportarDatos(user) {
+            const request = indexedDB.open(`${DB_NAME}_${user}`, 1);
+            request.onsuccess = (e) => {
+                const userDb = e.target.result;
+                const req = userDb.transaction('coleccion', 'readonly').objectStore('coleccion').getAll();
+                req.onsuccess = () => {
+                    const data = { categorias, equipos, carreras, coleccion: req.result || [], usuario: user };
+                    const a = document.createElement('a');
+                    a.href = URL.createObjectURL(new Blob([JSON.stringify(data)], {type: 'application/json'}));
+                    a.download = `backup_${user}_${new Date().toISOString().split('T')[0]}.json`;
+                    a.click();
+                    showToast('📥 Exportando...');
+                };
+            };
+        }
+
+        function exportarExcel(user) {
+            const request = indexedDB.open(`${DB_NAME}_${user}`, 1);
+            request.onsuccess = (e) => {
+                const userDb = e.target.result;
+                const req = userDb.transaction('coleccion', 'readonly').objectStore('coleccion').getAll();
+                req.onsuccess = () => {
+                    const datos = (req.result || []).map(item => ({ 'ID': String(item.id), 'Tipo': item.tipo, 'Equipo': item.equipo, 'Año': item.ano, 'Carrera': item.carrera || '', 'Notas': item.notas || '', 'Fotos': item.fotos ? item.fotos.length : 0 }));
+                    const ws = XLSX.utils.json_to_sheet(datos);
+                    const range = XLSX.utils.decode_range(ws['!ref']);
+                    for (let R = range.s.r + 1; R <= range.e.r; ++R) {
+                        const ca = XLSX.utils.encode_cell({r: R, c: 0});
+                        if (ws[ca]) { ws[ca].t = 's'; ws[ca].z = '@'; }
+                    }
+                    const wb = XLSX.utils.book_new();
+                    XLSX.utils.book_append_sheet(wb, ws, 'Colección');
+                    XLSX.writeFile(wb, `Coleccion_${user}_${new Date().toISOString().split('T')[0]}.xlsx`);
+                    showToast('📊 Excel exportado');
+                };
+            };
+        }
+
+        /* ===== FUNCIÓN AUXILIAR: AÑADIR PIE DE FOTO A IMAGEN ===== */
+        async function añadirPieDeFoto(base64DataUrl, textoSinId) {
+            return new Promise((resolve) => {
+                const img = new Image();
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    canvas.width = img.width;
+                    canvas.height = img.height;
+                    const ctx = canvas.getContext('2d');
+                    // Dibujar imagen original
+                    ctx.drawImage(img, 0, 0);
+                    // Configurar texto del pie de foto
+                    const fontSize = Math.max(12, Math.round(img.width * 0.018));
+                    ctx.font = `bold ${fontSize}px Arial, sans-serif`;
+                    const texto = textoSinId;
+                    const padding = 6;
+                    const textWidth = ctx.measureText(texto).width;
+                    const boxH = fontSize + padding * 2;
+                    // Fondo semitransparente para legibilidad
+                    ctx.fillStyle = 'rgba(0,0,0,0.45)';
+                    ctx.fillRect(0, img.height - boxH, textWidth + padding * 2 + 4, boxH);
+                    // Texto en rosa y negrita
+                    ctx.fillStyle = '#ff69b4';
+                    ctx.textBaseline = 'bottom';
+                    ctx.fillText(texto, padding + 2, img.height - padding);
+                    resolve(canvas.toDataURL('image/jpeg', 0.85));
+                };
+                img.onerror = () => resolve(base64DataUrl); // Si falla, devolver original
+                img.src = base64DataUrl;
+            });
+        }
+
+        /* Quitar la parte de ID del nombre de archivo (formato: XXXXX_id123456 -> XXXXX) */
+        function nombreSinId(nombre) {
+            // Eliminar extensión
+            const sinExt = nombre.replace(/\.jpg$/i, '').replace(/\.jpeg$/i, '').replace(/\.png$/i, '');
+            return sinExt;
+        }
+
+        async function exportarFotosZIP(user, formato) {
+            const request = indexedDB.open(`${DB_NAME}_${user}`, 1);
+            request.onsuccess = (e) => {
+                const userDb = e.target.result;
+                const req = userDb.transaction('coleccion', 'readonly').objectStore('coleccion').getAll();
+                req.onsuccess = async () => {
+                    const userColeccion = req.result || [];
+                    if (userColeccion.length === 0) { alert('Sin fotos'); return; }
+                    const zip = new JSZip();
+                    showToast('⏳ Procesando fotos con pie de página...');
+
+                    // Función auxiliar para limpiar nombres de carpeta/archivo
+                    function limpiarNombre(str) {
+                        return String(str).replace(/[^a-zA-Z0-9\-_áéíóúÁÉÍÓÚñÑüÜ ]/g, '_').trim();
+                    }
+
+                    // Construir lista de fotos según formato
+                    const fotosList = []; // { carpeta, nombre, data }
+
+                    if (formato === 'equipo') {
+                        userColeccion.forEach(item => {
+                            if (item.fotos && item.fotos.length > 0) {
+                                const folderKey = limpiarNombre(item.equipo.toUpperCase());
+                                item.fotos.forEach((foto, idx) => {
+                                    const nombre = `${limpiarNombre(item.equipo.toUpperCase())}_${item.ano}_${limpiarNombre(item.tipo.toUpperCase())}_${idx+1}.jpg`;
+                                    fotosList.push({ carpeta: folderKey, nombre, data: foto });
+                                });
+                            }
+                        });
+                    } else if (formato === 'year') {
+                        userColeccion.forEach(item => {
+                            if (item.fotos && item.fotos.length > 0) {
+                                const folderKey = String(item.ano);
+                                item.fotos.forEach((foto, idx) => {
+                                    const nombre = `${item.ano}_${limpiarNombre(item.equipo.toUpperCase())}_${limpiarNombre(item.tipo.toUpperCase())}_${idx+1}.jpg`;
+                                    fotosList.push({ carpeta: folderKey, nombre, data: foto });
+                                });
+                            }
+                        });
+                    } else if (formato === 'tipo') {
+                        userColeccion.forEach(item => {
+                            if (item.fotos && item.fotos.length > 0) {
+                                const folderKey = limpiarNombre(item.tipo.toUpperCase());
+                                item.fotos.forEach((foto, idx) => {
+                                    const nombre = `${limpiarNombre(item.tipo.toUpperCase())}_${limpiarNombre(item.equipo.toUpperCase())}_${item.ano}_${idx+1}.jpg`;
+                                    fotosList.push({ carpeta: folderKey, nombre, data: foto });
+                                });
+                            }
+                        });
+                    }
+
+                    // Procesar cada foto: añadir pie de página
+                    for (const fotoInfo of fotosList) {
+                        // Texto del pie: nombre sin extensión
+                        const textoSinId = fotoInfo.nombre.replace(/\.jpg$/i, '');
+                        let dataConPie = fotoInfo.data;
+                        try {
+                            dataConPie = await añadirPieDeFoto(fotoInfo.data, textoSinId);
+                        } catch(err) {
+                            dataConPie = fotoInfo.data; // fallback
+                        }
+                        const base64 = dataConPie.split(',')[1];
+                        if (base64) {
+                            const folder = zip.folder(fotoInfo.carpeta);
+                            folder.file(fotoInfo.nombre, base64, {base64: true});
+                        }
+                    }
+
+                    showToast('⏳ Generando ZIP...');
+                    const content = await zip.generateAsync({type: 'blob'});
+                    const a = document.createElement('a');
+                    a.href = URL.createObjectURL(content);
+                    a.download = `Fotos_${formato}_${user}_${new Date().toISOString().split('T')[0]}.zip`;
+                    a.click();
+                    showToast('📸 Fotos exportadas correctamente');
+                };
+            };
+        }
+
+        function importarDatos(e) {
+            if (!currentUser) { showToast('🔐 Inicia sesión primero'); return; }
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (ev) => {
+                try {
+                    const data = JSON.parse(ev.target.result);
+                    const targetUser = pendingExportUser || currentUser;
+                    if (confirm(`¿Importar ${data.coleccion?.length || 0} objetos del usuario "${data.usuario || targetUser}" a "${targetUser}"?`)) {
+                        const request = indexedDB.open(`${DB_NAME}_${targetUser}`, 1);
+                        request.onupgradeneeded = (e) => {
+                            const database = e.target.result;
+                            if (!database.objectStoreNames.contains('coleccion')) {
+                                database.createObjectStore('coleccion', { keyPath: 'id' });
+                            }
+                        };
+                        request.onsuccess = (e) => {
+                            const userDb = e.target.result;
+                            const tx = userDb.transaction('coleccion', 'readwrite');
+                            const store = tx.objectStore('coleccion');
+                            (data.coleccion || []).forEach(i => { i.usuario = targetUser; store.put(i); });
+                            tx.oncomplete = () => {
+                                if (data.categorias) categorias = data.categorias;
+                                if (data.equipos) equipos = data.equipos;
+                                if (data.carreras) carreras = data.carreras;
+                                renderizarCategorias();
+                                llenarSelects();
+                                cargarColeccion();
+                                showToast('✅ Importación completada');
+                            };
+                        };
+                    }
+                } catch(err) { alert('Error al importar: ' + err.message); }
+            };
+            reader.readAsText(file);
+        }
+
+        /* ===== EVENTOS GLOBALES ===== */
+        document.getElementById('modal').addEventListener('click', (e) => { if (e.target.id === 'modal') cerrarModal(); });
+
+        document.addEventListener('keydown', (e) => {
+            if (document.getElementById('lightbox').classList.contains('active')) {
+                if (e.key === 'Escape') cerrarLightbox();
+                if (e.key === 'ArrowLeft') cambiarFoto(-1);
+                if (e.key === 'ArrowRight') cambiarFoto(1);
+            }
+            if (e.key === 'Escape') {
+                document.querySelectorAll('.modal.active').forEach(m => { if (m.id !== 'lightbox') m.classList.remove('active'); });
+            }
+        });
+
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.btn-wrapper')) {
+                document.getElementById('fotoDropdown').classList.remove('active');
+            }
+            if (!e.target.closest('.team-search-container')) {
+                document.querySelectorAll('.team-list').forEach(l => l.classList.remove('active'));
+            }
+            if (!e.target.closest('#userLock') && !e.target.closest('#userInfo')) {
+                document.getElementById('userInfo').classList.remove('active');
+            }
+        });
+
+        /* ===== INPUT FOTOS (SUBIR + IMPORTAR) ===== */
+        document.getElementById('fotoInput').addEventListener('change', function(e) {
+            if (exportAction === 'importar') {
+                importarDatos(e);
+                this.value = '';
+                exportAction = null;
+            } else {
+                procesarFotos(this);
+                this.value = '';
+            }
+        });
+    </script>
+</body>
+</html>
